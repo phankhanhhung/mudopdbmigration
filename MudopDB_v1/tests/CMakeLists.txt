@@ -9,7 +9,7 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 add_executable(tests
-  placeholder.cpp
+  test_file_layer.cpp
 )
 target_link_libraries(tests PRIVATE gtest_main mudop_utils)
 target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
