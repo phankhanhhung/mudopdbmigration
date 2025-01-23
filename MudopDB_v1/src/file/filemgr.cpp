@@ -58,6 +58,7 @@ void FileMgr::update_file_size(const std::string& filename) {
 }
 
 void FileMgr::read(const BlockId& blk, Page& page) {
+    std::lock_guard<std::mutex> lock(mutex_);
 
     std::string filepath = get_file_path(blk.file_name());
 
@@ -91,6 +92,7 @@ void FileMgr::read(const BlockId& blk, Page& page) {
 }
 
 void FileMgr::write(const BlockId& blk, Page& page) {
+    std::lock_guard<std::mutex> lock(mutex_);
 
     std::fstream file = get_file(blk.file_name(), std::ios::in | std::ios::out | std::ios::binary);
 
@@ -112,6 +114,7 @@ void FileMgr::write(const BlockId& blk, Page& page) {
 }
 
 BlockId FileMgr::append(const std::string& filename) {
+    std::lock_guard<std::mutex> lock(mutex_);
 
     // Get current file size
     size_t new_blknum = length(filename);
