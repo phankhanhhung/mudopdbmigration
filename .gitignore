@@ -1,5 +1,6 @@
 # Build directories
 build/
+target/
 cmake-build-*/
 
 # IDE
@@ -16,3 +17,8 @@ cmake-build-*/
 *.a
 *.so
 *.dylib
+
+# Rust target directory is already covered above
+
+# Dependencies (will be fetched)
+_deps/
