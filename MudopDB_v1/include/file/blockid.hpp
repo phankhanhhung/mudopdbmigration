@@ -6,14 +6,34 @@
 
 namespace file {
 
+/**
+ * BlockId uniquely identifies a block in the file system.
+ * A block is identified by its filename and block number.
+ *
+ * Corresponds to BlockId in Rust (NMDB2/src/file/blockid.rs)
+ */
 class BlockId {
 public:
+    /**
+     * Creates a new block identifier.
+     * @param filename the name of the file
+     * @param blknum the block number within the file
+     */
     BlockId(const std::string& filename, int32_t blknum);
 
+    /**
+     * Returns the name of the file where this block is located.
+     */
     const std::string& file_name() const;
 
+    /**
+     * Returns the block number within the file.
+     */
     int32_t number() const;
 
+    /**
+     * String representation for debugging.
+     */
     std::string to_string() const;
 
     // Equality comparison
