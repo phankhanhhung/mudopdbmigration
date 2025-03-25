@@ -8,6 +8,13 @@
 
 namespace tx {
 
+/**
+ * LockTable manages the global lock state for blocks.
+ * Positive lock values indicate shared lock count.
+ * Negative lock values indicate exclusive lock (-1).
+ *
+ * Corresponds to LockTable in Rust (NMDB2/src/tx/concurrency/locktable.rs)
+ */
 class LockTable {
 public:
     LockTable();

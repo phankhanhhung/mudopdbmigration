@@ -7,6 +7,12 @@
 
 namespace tx {
 
+/**
+ * StartRecord logs the start of a transaction.
+ * Format: [Op::START (4B)][txnum (4B)]
+ *
+ * Corresponds to StartRecord in Rust (NMDB2/src/tx/recovery/startrecord.rs)
+ */
 class StartRecord : public LogRecord {
 public:
     explicit StartRecord(const file::Page& p);

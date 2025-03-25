@@ -11,6 +11,10 @@ namespace tx {
 // Forward declaration
 class Transaction;
 
+/**
+ * Op codes for log record types.
+ * Corresponds to Op enum in Rust (NMDB2/src/tx/recovery/logrecord.rs)
+ */
 enum class Op : int32_t {
     CHECKPOINT = 0,
     START = 1,
@@ -20,6 +24,10 @@ enum class Op : int32_t {
     SETSTRING = 5
 };
 
+/**
+ * LogRecord is the abstract base class for all log record types.
+ * Corresponds to LogRecord trait in Rust (NMDB2/src/tx/recovery/logrecord.rs)
+ */
 class LogRecord {
 public:
     virtual ~LogRecord() = default;
@@ -29,6 +37,10 @@ public:
     virtual void undo(Transaction& tx) = 0;
 };
 
+/**
+ * Factory function to create a LogRecord from raw bytes.
+ * Corresponds to create_log_record() in Rust.
+ */
 std::unique_ptr<LogRecord> create_log_record(std::vector<uint8_t> bytes);
 
 } // namespace tx

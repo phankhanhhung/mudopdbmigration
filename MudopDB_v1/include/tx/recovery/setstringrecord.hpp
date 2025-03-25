@@ -9,6 +9,13 @@
 
 namespace tx {
 
+/**
+ * SetStringRecord logs a string field modification.
+ * Format: [Op::SETSTRING (4B)][txnum (4B)][filename (var)][blknum (4B)][offset (4B)][val (var)]
+ * val stores the OLD value for undo.
+ *
+ * Corresponds to SetStringRecord in Rust (NMDB2/src/tx/recovery/setstringrecord.rs)
+ */
 class SetStringRecord : public LogRecord {
 public:
     explicit SetStringRecord(const file::Page& p);

@@ -7,6 +7,12 @@
 
 namespace tx {
 
+/**
+ * CommitRecord logs the commit of a transaction.
+ * Format: [Op::COMMIT (4B)][txnum (4B)]
+ *
+ * Corresponds to CommitRecord in Rust (NMDB2/src/tx/recovery/commitrecord.rs)
+ */
 class CommitRecord : public LogRecord {
 public:
     explicit CommitRecord(const file::Page& p);

@@ -8,6 +8,13 @@
 
 namespace tx {
 
+/**
+ * SetIntRecord logs an integer field modification.
+ * Format: [Op::SETINT (4B)][txnum (4B)][filename (var)][blknum (4B)][offset (4B)][val (4B)]
+ * val stores the OLD value for undo.
+ *
+ * Corresponds to SetIntRecord in Rust (NMDB2/src/tx/recovery/setintrecord.rs)
+ */
 class SetIntRecord : public LogRecord {
 public:
     explicit SetIntRecord(const file::Page& p);

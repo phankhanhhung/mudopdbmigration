@@ -7,6 +7,12 @@
 
 namespace tx {
 
+/**
+ * RollbackRecord logs the rollback of a transaction.
+ * Format: [Op::ROLLBACK (4B)][txnum (4B)]
+ *
+ * Corresponds to RollbackRecord in Rust (NMDB2/src/tx/recovery/rollbackrecord.rs)
+ */
 class RollbackRecord : public LogRecord {
 public:
     explicit RollbackRecord(const file::Page& p);

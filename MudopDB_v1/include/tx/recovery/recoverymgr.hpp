@@ -7,6 +7,13 @@
 
 namespace tx {
 
+/**
+ * RecoveryMgr manages transaction recovery using WAL.
+ * Writes log records for data modifications and handles
+ * commit flushing.
+ *
+ * Corresponds to RecoveryMgr in Rust (NMDB2/src/tx/recovery/recoverymgr.rs)
+ */
 class RecoveryMgr {
 public:
     RecoveryMgr(size_t txnum,

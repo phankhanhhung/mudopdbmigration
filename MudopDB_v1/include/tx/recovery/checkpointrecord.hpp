@@ -6,6 +6,13 @@
 
 namespace tx {
 
+/**
+ * CheckPointRecord logs a checkpoint.
+ * Format: [Op::CHECKPOINT (4B)]
+ * Has no transaction number and undo is a no-op.
+ *
+ * Corresponds to CheckPointRecord in Rust (NMDB2/src/tx/recovery/checkpointrecord.rs)
+ */
 class CheckPointRecord : public LogRecord {
 public:
     CheckPointRecord();
