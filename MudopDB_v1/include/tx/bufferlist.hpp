@@ -10,6 +10,12 @@
 
 namespace tx {
 
+/**
+ * BufferList tracks the buffers pinned by a transaction.
+ * Maps BlockId to buffer pool index.
+ *
+ * Corresponds to BufferList in Rust (NMDB2/src/tx/bufferlist.rs)
+ */
 class BufferList {
 public:
     explicit BufferList(std::shared_ptr<buffer::BufferMgr> bm);
