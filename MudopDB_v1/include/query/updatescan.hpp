@@ -7,6 +7,11 @@
 #include <optional>
 #include <string>
 
+/**
+ * UpdateScan extends Scan with write operations.
+ *
+ * Corresponds to UpdateScanControl trait in Rust (NMDB2/src/query/updatescan.rs)
+ */
 class UpdateScan : public Scan {
 public:
     virtual ~UpdateScan() = default;

@@ -16,6 +16,14 @@ class Transaction;
 
 namespace record {
 
+/**
+ * TableScan provides sequential access to table records.
+ *
+ * Implements the UpdateScan interface for reading and writing records.
+ * Uses Transaction layer for all data access.
+ *
+ * Corresponds to TableScan in Rust (NMDB2/src/record/tablescan.rs)
+ */
 class TableScan : public UpdateScan {
 public:
     TableScan(std::shared_ptr<tx::Transaction> tx,

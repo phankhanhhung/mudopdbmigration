@@ -13,8 +13,28 @@ class Transaction;
 
 namespace record {
 
+/**
+ * RecordPage manages records within a single page.
+ *
+ * Page Format:
+ * [Slot 0: flag + fields][Slot 1: flag + fields][...]
+ *
+ * Flag: 0 = EMPTY, 1 = USED
+ *
+ * Uses Transaction layer for all data access.
+ *
+ * Corresponds to RecordPage in Rust (NMDB2/src/record/recordpage.rs)
+ */
 class RecordPage {
 public:
+    /**
+     * Creates a record page for a block.
+     * Pins the block via the transaction.
+     *
+     * @param tx the transaction
+     * @param blk the block to manage
+     * @param layout the record layout
+     */
     RecordPage(std::shared_ptr<tx::Transaction> tx,
                const file::BlockId& blk,
                const Layout& layout);
