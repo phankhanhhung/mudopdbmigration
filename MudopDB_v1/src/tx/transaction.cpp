@@ -42,6 +42,13 @@ void Transaction::rollback() {
     mybuffers_.unpin_all();
 }
 
+void Transaction::recover() {
+    bm_->flush_all(txnum_);
+    do_recover();
+    bm_->flush_all(txnum_);
+    size_t lsn = CheckPointRecord::write_to_log(*lm_);
+    lm_->flush(lsn);
+}
 
 void Transaction::pin(const file::BlockId& blk) {
     mybuffers_.pin(blk);
@@ -149,5 +156,29 @@ void Transaction::do_rollback() {
     }
 }
 
+void Transaction::do_recover() {
+    std::vector<size_t> finished_txs;
+    std::vector<std::unique_ptr<LogRecord>> recs;
+    auto iter = lm_->iterator();
+    while (iter->has_next()) {
+        auto bytes = iter->next();
+        auto rec = create_log_record(std::move(bytes));
+        if (rec->op() == Op::CHECKPOINT) {
+            break;
+        }
+        auto tx_number = rec->tx_number();
+        if (tx_number.has_value()) {
+            if (rec->op() == Op::COMMIT || rec->op() == Op::ROLLBACK) {
+                finished_txs.push_back(tx_number.value());
+            } else if (std::find(finished_txs.begin(), finished_txs.end(),
+                                  tx_number.value()) == finished_txs.end()) {
+                recs.push_back(std::move(rec));
+            }
+        }
+    }
+    for (auto& rec : recs) {
+        rec->undo(*this);
+    }
+}
 
 } // namespace tx

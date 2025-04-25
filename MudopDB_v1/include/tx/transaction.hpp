@@ -14,6 +14,12 @@
 
 namespace tx {
 
+/**
+ * Transaction provides transaction semantics for the database.
+ * Manages concurrency control, recovery, and buffer access.
+ *
+ * Corresponds to Transaction in Rust (NMDB2/src/tx/transaction.rs)
+ */
 class Transaction {
 public:
     Transaction(std::shared_ptr<file::FileMgr> fm,
@@ -22,6 +28,7 @@ public:
 
     void commit();
     void rollback();
+    void recover();
 
     void pin(const file::BlockId& blk);
     void unpin(const file::BlockId& blk);
@@ -43,6 +50,7 @@ private:
     static constexpr int32_t END_OF_FILE = -1;
 
     void do_rollback();
+    void do_recover();
 
     static size_t next_tx_num();
 
