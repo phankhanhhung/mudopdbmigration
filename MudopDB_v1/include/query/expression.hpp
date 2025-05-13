@@ -11,6 +11,11 @@ class Schema;
 
 class Scan;
 
+/**
+ * An expression is either a constant or a field name.
+ *
+ * Corresponds to Expression in Rust (NMDB2/src/query/expression.rs)
+ */
 class Expression {
 public:
     static Expression with_constant(const Constant& val);

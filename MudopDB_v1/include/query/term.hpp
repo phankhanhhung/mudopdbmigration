@@ -13,6 +13,11 @@ class Schema;
 class Scan;
 class Plan;
 
+/**
+ * A term is a comparison between two expressions (lhs = rhs).
+ *
+ * Corresponds to Term in Rust (NMDB2/src/query/term.rs)
+ */
 class Term {
 public:
     Term(const Expression& lhs, const Expression& rhs);

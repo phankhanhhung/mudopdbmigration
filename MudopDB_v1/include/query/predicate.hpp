@@ -15,6 +15,11 @@ class Schema;
 class Scan;
 class Plan;
 
+/**
+ * A predicate is a conjunction (AND) of terms.
+ *
+ * Corresponds to Predicate in Rust (NMDB2/src/query/predicate.rs)
+ */
 class Predicate {
 public:
     Predicate();

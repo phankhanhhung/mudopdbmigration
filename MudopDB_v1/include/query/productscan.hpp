@@ -4,6 +4,11 @@
 #include "query/scan.hpp"
 #include <memory>
 
+/**
+ * ProductScan computes the Cartesian product of two scans.
+ *
+ * Corresponds to ProductScan in Rust (NMDB2/src/query/productscan.rs)
+ */
 class ProductScan : public Scan {
 public:
     ProductScan(std::unique_ptr<Scan> s1, std::unique_ptr<Scan> s2);

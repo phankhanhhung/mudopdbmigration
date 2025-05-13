@@ -6,6 +6,11 @@
 #include <vector>
 #include <string>
 
+/**
+ * ProjectScan restricts access to a subset of fields.
+ *
+ * Corresponds to ProjectScan in Rust (NMDB2/src/query/projectscan.rs)
+ */
 class ProjectScan : public Scan {
 public:
     ProjectScan(std::unique_ptr<Scan> s, const std::vector<std::string>& fieldlist);

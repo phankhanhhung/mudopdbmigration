@@ -5,6 +5,12 @@
 #include "query/predicate.hpp"
 #include <memory>
 
+/**
+ * SelectScan filters records using a predicate.
+ * Supports update operations by delegating to the inner scan.
+ *
+ * Corresponds to SelectScan in Rust (NMDB2/src/query/selectscan.rs)
+ */
 class SelectScan : public UpdateScan {
 public:
     SelectScan(std::unique_ptr<Scan> s, const Predicate& pred);
