@@ -6,6 +6,7 @@ namespace metadata {
 MetadataMgr::MetadataMgr(bool is_new, std::shared_ptr<tx::Transaction> tx)
     : tblmgr_(std::make_shared<TableMgr>(is_new, tx)),
       viewmgr_(is_new, tblmgr_, tx),
+      statmgr_(std::make_shared<StatMgr>(tblmgr_, tx)) {}
 
 void MetadataMgr::create_table(const std::string& tblname,
                                 std::shared_ptr<record::Schema> sch,
@@ -29,5 +30,10 @@ std::optional<std::string> MetadataMgr::get_view_def(const std::string& viewname
     return viewmgr_.get_view_def(viewname, tx);
 }
 
+StatInfo MetadataMgr::get_stat_info(const std::string& tblname,
+                                     const record::Layout& layout,
+                                     std::shared_ptr<tx::Transaction> tx) {
+    return statmgr_->get_stat_info(tblname, layout, tx);
+}
 
 } // namespace metadata
