@@ -12,6 +12,11 @@ class Transaction;
 
 namespace metadata {
 
+/**
+ * ViewMgr manages view definitions via viewcat table.
+ *
+ * Corresponds to ViewMgr in Rust (NMDB2/src/metadata/viewmgr.rs)
+ */
 class ViewMgr {
 public:
     ViewMgr(bool is_new,

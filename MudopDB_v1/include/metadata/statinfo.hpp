@@ -6,6 +6,11 @@
 
 namespace metadata {
 
+/**
+ * StatInfo holds statistical information about a table.
+ *
+ * Corresponds to StatInfo in Rust (NMDB2/src/metadata/statinfo.rs)
+ */
 class StatInfo {
 public:
     StatInfo(size_t num_blocks, size_t num_recs);

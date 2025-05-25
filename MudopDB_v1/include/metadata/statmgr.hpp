@@ -14,6 +14,12 @@ class Transaction;
 
 namespace metadata {
 
+/**
+ * StatMgr manages table statistics.
+ * Refreshes statistics after every 100 calls.
+ *
+ * Corresponds to StatMgr in Rust (NMDB2/src/metadata/statmgr.rs)
+ */
 class StatMgr {
 public:
     StatMgr(std::shared_ptr<TableMgr> tbl_mgr,

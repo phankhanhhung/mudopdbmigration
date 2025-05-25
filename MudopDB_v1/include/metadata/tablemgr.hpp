@@ -12,6 +12,13 @@ class Transaction;
 
 namespace metadata {
 
+/**
+ * TableMgr manages table metadata via system catalog tables:
+ * - tblcat(tblname, slotsize)
+ * - fldcat(tblname, fldname, type, length, offset)
+ *
+ * Corresponds to TableMgr in Rust (NMDB2/src/metadata/tablemgr.rs)
+ */
 class TableMgr {
 public:
     static constexpr size_t MAX_NAME = 16;
