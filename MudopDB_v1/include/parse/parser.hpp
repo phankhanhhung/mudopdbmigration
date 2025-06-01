@@ -22,6 +22,11 @@ namespace parse {
 using Object = std::variant<InsertData, DeleteData, ModifyData,
                             CreateTableData, CreateViewData, CreateIndexData>;
 
+/**
+ * Recursive descent SQL parser.
+ *
+ * Corresponds to Parser in Rust (NMDB2/src/parse/parser.rs)
+ */
 class Parser {
 public:
     explicit Parser(const std::string& s);

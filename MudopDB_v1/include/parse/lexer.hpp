@@ -8,6 +8,11 @@
 
 namespace parse {
 
+/**
+ * Lexer tokenizes SQL input strings.
+ *
+ * Corresponds to Lexer in Rust (NMDB2/src/parse/lexer.rs)
+ */
 class Lexer {
 public:
     explicit Lexer(const std::string& s);
