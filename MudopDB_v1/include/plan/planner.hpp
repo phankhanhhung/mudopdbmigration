@@ -6,6 +6,11 @@
 #include <memory>
 #include <string>
 
+/**
+ * Main planner that coordinates query and update planners.
+ *
+ * Corresponds to Planner in Rust (NMDB2/src/plan/planner.rs)
+ */
 class Planner {
 public:
     Planner(std::unique_ptr<QueryPlanner> qplanner,

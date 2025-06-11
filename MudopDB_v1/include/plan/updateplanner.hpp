@@ -14,6 +14,11 @@ class CreateIndexData;
 }
 namespace tx { class Transaction; }
 
+/**
+ * Abstract interface for update planners.
+ *
+ * Corresponds to UpdatePlannerControl trait in Rust.
+ */
 class UpdatePlanner {
 public:
     virtual ~UpdatePlanner() = default;

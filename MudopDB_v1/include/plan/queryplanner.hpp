@@ -7,6 +7,11 @@ namespace parse { class QueryData; }
 namespace tx { class Transaction; }
 class Plan;
 
+/**
+ * Abstract interface for query planners.
+ *
+ * Corresponds to QueryPlannerControl trait in Rust.
+ */
 class QueryPlanner {
 public:
     virtual ~QueryPlanner() = default;
