@@ -9,6 +9,11 @@ class Scan;
 
 namespace materialize {
 
+/**
+ * Abstract interface for aggregate functions.
+ *
+ * Corresponds to AggregationFnControl trait in Rust.
+ */
 class AggregationFn {
 public:
     virtual ~AggregationFn() = default;
