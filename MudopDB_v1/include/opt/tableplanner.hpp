@@ -12,6 +12,12 @@ namespace tx { class Transaction; }
 
 namespace opt {
 
+/**
+ * Plans for a single table within a query.
+ * Simplified version without index support (Phase 7).
+ *
+ * Corresponds to TablePlanner in Rust (NMDB2/src/opt/tableplanner.rs)
+ */
 class TablePlanner {
 public:
     TablePlanner(const std::string& tblname,
