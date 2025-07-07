@@ -9,6 +9,10 @@ class SimpleDB;
 class Transaction;
 class Planner;
 
+/**
+ * Abstract base class for database connections.
+ * Corresponds to ConnectionControl trait in Rust (NMDB2/src/api/connection.rs)
+ */
 class Connection {
 public:
   virtual ~Connection() = default;
@@ -18,6 +22,10 @@ public:
   virtual void rollback() = 0;
 };
 
+/**
+ * Embedded database connection.
+ * Corresponds to EmbeddedConnection in Rust (NMDB2/src/api/embedded/embeddedconnection.rs)
+ */
 class EmbeddedConnection : public Connection {
 public:
   explicit EmbeddedConnection(std::shared_ptr<SimpleDB> db);
@@ -38,6 +46,9 @@ private:
   std::shared_ptr<Planner> planner_;
 };
 
+/**
+ * Network database connection.
+ */
 class NetworkConnection : public Connection {
 public:
   std::unique_ptr<Statement> create_statement() override;
