@@ -1,0 +1,11 @@
+build
+.git
+.gitignore
+.vscode
+*.swp
+*.o
+*.a
+CMakeCache.txt
+CMakeFiles
+__pycache__
+*.pyc
