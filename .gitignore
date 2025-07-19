@@ -18,7 +18,5 @@ cmake-build-*/
 *.so
 *.dylib
 
-# Rust target directory is already covered above
-
 # Dependencies (will be fetched)
 _deps/
