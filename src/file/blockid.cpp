@@ -1,3 +1,8 @@
+/**
+ * BlockId implementation.
+ * Identifies a specific block within a database file by filename and block number.
+ */
+
 #include "file/blockid.hpp"
 #include <sstream>
 

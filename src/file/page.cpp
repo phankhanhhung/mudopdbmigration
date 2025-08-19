@@ -1,3 +1,8 @@
+/**
+ * Page implementation.
+ * Byte-buffer abstraction for reading and writing integers and strings at arbitrary offsets.
+ */
+
 #include "file/page.hpp"
 #include <cstring>
 #include <algorithm>
