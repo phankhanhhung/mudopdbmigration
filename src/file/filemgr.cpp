@@ -1,3 +1,9 @@
+/**
+ * FileMgr implementation.
+ * Manages all database files on disk. Provides thread-safe block-level
+ * read, write, and append operations. Cleans up temporary files on startup.
+ */
+
 #include "file/filemgr.hpp"
 #include <filesystem>
 #include <stdexcept>
