@@ -1,3 +1,8 @@
+/**
+ * @file blockid.hpp
+ * @brief Block identifier for database disk blocks.
+ */
+
 #ifndef BLOCKID_HPP
 #define BLOCKID_HPP
 

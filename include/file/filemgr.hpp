@@ -1,3 +1,8 @@
+/**
+ * @file filemgr.hpp
+ * @brief File manager providing block-level disk I/O with thread safety.
+ */
+
 #ifndef FILEMGR_HPP
 #define FILEMGR_HPP
 

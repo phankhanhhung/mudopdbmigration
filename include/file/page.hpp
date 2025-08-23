@@ -1,3 +1,8 @@
+/**
+ * @file page.hpp
+ * @brief In-memory page buffer for reading/writing typed values.
+ */
+
 #ifndef PAGE_HPP
 #define PAGE_HPP
 
