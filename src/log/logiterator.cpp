@@ -1,3 +1,9 @@
+/**
+ * LogIterator implementation.
+ * Iterates over log records in reverse order (most recent first),
+ * reading backwards through the log file block by block.
+ */
+
 #include "log/logiterator.hpp"
 #include <stdexcept>
 

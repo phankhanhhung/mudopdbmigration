@@ -1,3 +1,9 @@
+/**
+ * LogMgr implementation.
+ * Manages the write-ahead log (WAL). Appends log records to an in-memory page
+ * and flushes to disk when the page is full or when explicitly requested.
+ */
+
 #include "log/logmgr.hpp"
 #include <stdexcept>
 
