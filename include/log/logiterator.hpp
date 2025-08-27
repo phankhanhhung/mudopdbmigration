@@ -1,3 +1,8 @@
+/**
+ * @file logiterator.hpp
+ * @brief Reverse iterator over WAL log records.
+ */
+
 #ifndef LOGITERATOR_HPP
 #define LOGITERATOR_HPP
 

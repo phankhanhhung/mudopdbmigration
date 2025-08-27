@@ -1,3 +1,8 @@
+/**
+ * @file logmgr.hpp
+ * @brief Write-ahead log manager for crash recovery.
+ */
+
 #ifndef LOGMGR_HPP
 #define LOGMGR_HPP
 
