@@ -1,3 +1,9 @@
+/**
+ * Buffer implementation.
+ * Wraps a Page with metadata: pin count, modifying transaction number,
+ * LSN tracking, and the assigned disk block.
+ */
+
 #include "buffer/buffer.hpp"
 
 namespace buffer {

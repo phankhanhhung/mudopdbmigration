@@ -1,3 +1,9 @@
+/**
+ * BufferMgr implementation.
+ * Manages a fixed-size pool of Buffer objects. Uses a naive eviction strategy
+ * (first unpinned buffer) with timeout-based waiting when the pool is full.
+ */
+
 #include "buffer/buffermgr.hpp"
 
 namespace buffer {
