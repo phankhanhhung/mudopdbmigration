@@ -1,3 +1,8 @@
+/**
+ * @file buffer.hpp
+ * @brief Single page buffer with pin/unpin and dirty tracking.
+ */
+
 #ifndef BUFFER_HPP
 #define BUFFER_HPP
 
