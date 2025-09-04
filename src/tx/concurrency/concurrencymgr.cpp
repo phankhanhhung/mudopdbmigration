@@ -1,3 +1,9 @@
+/**
+ * ConcurrencyMgr implementation.
+ * Per-transaction concurrency manager that acquires S-locks for reads
+ * and X-locks for writes, releasing all locks on commit/rollback.
+ */
+
 #include "tx/concurrency/concurrencymgr.hpp"
 #include "tx/concurrency/locktable.hpp"
 #include <mutex>

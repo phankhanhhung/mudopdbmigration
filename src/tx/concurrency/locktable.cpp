@@ -1,3 +1,9 @@
+/**
+ * LockTable implementation.
+ * Maintains a table of shared (S) and exclusive (X) locks on blocks.
+ * Uses wait-based conflict resolution with timeout detection.
+ */
+
 #include "tx/concurrency/locktable.hpp"
 #include "buffer/buffermgr.hpp"
 #include <thread>
