@@ -1,3 +1,8 @@
+/**
+ * @file concurrencymgr.hpp
+ * @brief Per-transaction concurrency control manager.
+ */
+
 #ifndef CONCURRENCYMGR_HPP
 #define CONCURRENCYMGR_HPP
 

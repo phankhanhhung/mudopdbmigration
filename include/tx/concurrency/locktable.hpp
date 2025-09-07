@@ -1,3 +1,8 @@
+/**
+ * @file locktable.hpp
+ * @brief Lock table for shared/exclusive block-level locking.
+ */
+
 #ifndef LOCKTABLE_HPP
 #define LOCKTABLE_HPP
 
