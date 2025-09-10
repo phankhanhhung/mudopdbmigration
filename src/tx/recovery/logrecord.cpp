@@ -1,3 +1,9 @@
+/**
+ * LogRecord factory implementation.
+ * Deserializes raw log bytes into typed LogRecord objects (Start, Commit,
+ * Rollback, SetInt, SetString, Checkpoint) based on the operation tag.
+ */
+
 #include "tx/recovery/logrecord.hpp"
 #include "tx/recovery/checkpointrecord.hpp"
 #include "tx/recovery/startrecord.hpp"

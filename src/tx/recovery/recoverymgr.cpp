@@ -1,3 +1,9 @@
+/**
+ * RecoveryMgr implementation.
+ * Manages transaction recovery by writing log records for all modifications
+ * and performing undo-based recovery on crash.
+ */
+
 #include "tx/recovery/recoverymgr.hpp"
 #include "tx/recovery/startrecord.hpp"
 #include "tx/recovery/commitrecord.hpp"
