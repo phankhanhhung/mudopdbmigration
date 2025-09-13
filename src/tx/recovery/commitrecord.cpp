@@ -1,3 +1,7 @@
+/**
+ * CommitRecord - logs a successful transaction commit.
+ */
+
 #include "tx/recovery/commitrecord.hpp"
 
 namespace tx {

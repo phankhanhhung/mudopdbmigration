@@ -1,3 +1,7 @@
+/**
+ * StartRecord - logs the beginning of a transaction.
+ */
+
 #include "tx/recovery/startrecord.hpp"
 
 namespace tx {

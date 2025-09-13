@@ -1,3 +1,7 @@
+/**
+ * CheckpointRecord - marks a quiescent checkpoint in the log.
+ */
+
 #include "tx/recovery/checkpointrecord.hpp"
 
 namespace tx {

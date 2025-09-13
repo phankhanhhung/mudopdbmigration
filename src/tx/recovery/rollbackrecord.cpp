@@ -1,3 +1,7 @@
+/**
+ * RollbackRecord - logs a transaction rollback.
+ */
+
 #include "tx/recovery/rollbackrecord.hpp"
 
 namespace tx {
