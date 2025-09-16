@@ -1,3 +1,7 @@
+/**
+ * SetStringRecord - logs a string value modification for undo recovery.
+ */
+
 #include "tx/recovery/setstringrecord.hpp"
 #include "tx/transaction.hpp"
 

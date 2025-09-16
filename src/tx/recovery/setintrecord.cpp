@@ -1,3 +1,7 @@
+/**
+ * SetIntRecord - logs an integer value modification for undo recovery.
+ */
+
 #include "tx/recovery/setintrecord.hpp"
 #include "tx/transaction.hpp"
 
