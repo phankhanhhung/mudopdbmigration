@@ -1,3 +1,9 @@
+/**
+ * BufferList implementation.
+ * Tracks which buffers a transaction has pinned, mapping BlockIds to
+ * buffer pool indices for efficient lookup and bulk unpin on commit.
+ */
+
 #include "tx/bufferlist.hpp"
 #include <algorithm>
 #include <stdexcept>

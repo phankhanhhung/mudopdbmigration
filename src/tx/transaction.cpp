@@ -1,3 +1,9 @@
+/**
+ * Transaction implementation.
+ * Coordinates concurrency control, recovery logging, and buffer management.
+ * Provides get/set operations on blocks with automatic locking and WAL logging.
+ */
+
 #include "tx/transaction.hpp"
 #include "tx/recovery/logrecord.hpp"
 #include "tx/recovery/rollbackrecord.hpp"
