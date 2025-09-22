@@ -1,3 +1,8 @@
+/**
+ * @file bufferlist.hpp
+ * @brief Tracks pinned buffers for a single transaction.
+ */
+
 #ifndef BUFFERLIST_HPP
 #define BUFFERLIST_HPP
 
