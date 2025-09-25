@@ -1,3 +1,8 @@
+/**
+ * Schema implementation.
+ * Stores field definitions (name, type, length) for a database table.
+ */
+
 #include "record/schema.hpp"
 
 namespace record {

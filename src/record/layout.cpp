@@ -1,3 +1,9 @@
+/**
+ * Layout implementation.
+ * Computes the physical byte offsets of fields within a record slot,
+ * based on the table's Schema. Determines slot size for RecordPage.
+ */
+
 #include "record/layout.hpp"
 
 namespace record {

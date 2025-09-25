@@ -1,3 +1,8 @@
+/**
+ * RID (Record Identifier) implementation.
+ * Uniquely identifies a record by its block number and slot number within that block.
+ */
+
 #include "record/rid.hpp"
 #include <sstream>
 
