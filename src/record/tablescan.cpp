@@ -1,3 +1,9 @@
+/**
+ * TableScan implementation.
+ * Provides sequential access to all records in a table, spanning multiple blocks.
+ * Implements both Scan (read) and UpdateScan (read/write) interfaces.
+ */
+
 #include "record/tablescan.hpp"
 #include "tx/transaction.hpp"
 

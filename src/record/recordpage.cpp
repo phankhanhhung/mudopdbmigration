@@ -1,3 +1,9 @@
+/**
+ * RecordPage implementation.
+ * Manages fixed-length record slots within a single disk block.
+ * Each slot has a used/empty flag followed by the field data.
+ */
+
 #include "record/recordpage.hpp"
 #include "tx/transaction.hpp"
 
