@@ -1,3 +1,8 @@
+/**
+ * @file recordpage.hpp
+ * @brief Fixed-length record slot management within a single block.
+ */
+
 #ifndef RECORDPAGE_HPP
 #define RECORDPAGE_HPP
 

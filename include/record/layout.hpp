@@ -1,3 +1,8 @@
+/**
+ * @file layout.hpp
+ * @brief Physical record layout computing field offsets within a slot.
+ */
+
 #ifndef LAYOUT_HPP
 #define LAYOUT_HPP
 

@@ -1,3 +1,8 @@
+/**
+ * @file schema.hpp
+ * @brief Table schema definition with field names, types, and lengths.
+ */
+
 #ifndef SCHEMA_HPP
 #define SCHEMA_HPP
 

@@ -1,3 +1,8 @@
+/**
+ * @file rid.hpp
+ * @brief Record identifier (block number + slot number).
+ */
+
 #ifndef RID_HPP
 #define RID_HPP
 
