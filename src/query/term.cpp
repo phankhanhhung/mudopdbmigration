@@ -1,3 +1,8 @@
+/**
+ * Term implementation.
+ * A single comparison (lhs = rhs) within a WHERE predicate.
+ */
+
 #include "query/term.hpp"
 #include "query/scan.hpp"
 #include "plan/plan.hpp"

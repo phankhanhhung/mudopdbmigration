@@ -1,3 +1,8 @@
+/**
+ * Constant implementation.
+ * Wraps an integer or string value for use in SQL expressions and predicates.
+ */
+
 #include "query/constant.hpp"
 #include <functional>
 #include <sstream>

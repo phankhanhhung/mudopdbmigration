@@ -1,3 +1,8 @@
+/**
+ * Predicate implementation.
+ * Conjunction of Terms representing a SQL WHERE clause.
+ */
+
 #include "query/predicate.hpp"
 #include "record/schema.hpp"
 

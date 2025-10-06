@@ -1,3 +1,8 @@
+/**
+ * Expression implementation.
+ * Represents either a field reference or a constant value in a SQL expression.
+ */
+
 #include "query/expression.hpp"
 #include "query/scan.hpp"
 #include "record/schema.hpp"
