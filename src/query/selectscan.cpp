@@ -1,3 +1,8 @@
+/**
+ * SelectScan implementation.
+ * Filters records from an underlying scan using a Predicate.
+ */
+
 #include "query/selectscan.hpp"
 #include <stdexcept>
 

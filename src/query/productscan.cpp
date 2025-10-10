@@ -1,3 +1,8 @@
+/**
+ * ProductScan implementation.
+ * Computes the Cartesian product of two underlying scans.
+ */
+
 #include "query/productscan.hpp"
 
 ProductScan::ProductScan(std::unique_ptr<Scan> s1, std::unique_ptr<Scan> s2)

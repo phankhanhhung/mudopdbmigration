@@ -1,3 +1,8 @@
+/**
+ * ProjectScan implementation.
+ * Projects (selects) specific fields from an underlying scan.
+ */
+
 #include "query/projectscan.hpp"
 #include <algorithm>
 #include <stdexcept>

@@ -1,3 +1,7 @@
+/**
+ * Scan base implementation.
+ */
+
 #include "query/scan.hpp"
 
 // Scan is an abstract base class with pure virtual methods.
