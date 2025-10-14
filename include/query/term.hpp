@@ -1,3 +1,8 @@
+/**
+ * @file term.hpp
+ * @brief Single equality comparison in a WHERE clause.
+ */
+
 #ifndef TERM_HPP
 #define TERM_HPP
 

@@ -1,3 +1,8 @@
+/**
+ * @file expression.hpp
+ * @brief SQL expression: either a field name or a constant value.
+ */
+
 #ifndef EXPRESSION_HPP
 #define EXPRESSION_HPP
 

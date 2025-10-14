@@ -1,3 +1,8 @@
+/**
+ * @file predicate.hpp
+ * @brief Conjunction of terms representing a WHERE clause.
+ */
+
 #ifndef PREDICATE_HPP
 #define PREDICATE_HPP
 

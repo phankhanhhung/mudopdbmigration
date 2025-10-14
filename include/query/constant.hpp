@@ -1,3 +1,8 @@
+/**
+ * @file constant.hpp
+ * @brief SQL value wrapper supporting integer and string types.
+ */
+
 #ifndef CONSTANT_HPP
 #define CONSTANT_HPP
 
