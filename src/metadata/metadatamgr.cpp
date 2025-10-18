@@ -1,3 +1,8 @@
+/**
+ * MetadataMgr implementation.
+ * Unified facade for all metadata operations: tables, views, and statistics.
+ */
+
 #include "metadata/metadatamgr.hpp"
 #include "tx/transaction.hpp"
 

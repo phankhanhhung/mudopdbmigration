@@ -1,3 +1,8 @@
+/**
+ * StatMgr implementation.
+ * Maintains and caches table statistics, refreshing after a set number of updates.
+ */
+
 #include "metadata/statmgr.hpp"
 #include "record/tablescan.hpp"
 #include "tx/transaction.hpp"

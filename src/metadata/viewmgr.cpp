@@ -1,3 +1,8 @@
+/**
+ * ViewMgr implementation.
+ * Manages the viewcat system catalog table that stores view definitions.
+ */
+
 #include "metadata/viewmgr.hpp"
 #include "record/tablescan.hpp"
 #include "tx/transaction.hpp"

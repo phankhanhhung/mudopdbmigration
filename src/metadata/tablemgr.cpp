@@ -1,3 +1,8 @@
+/**
+ * TableMgr implementation.
+ * Manages the tblcat/fldcat system catalog tables that store table schemas.
+ */
+
 #include "metadata/tablemgr.hpp"
 #include "record/tablescan.hpp"
 #include "tx/transaction.hpp"

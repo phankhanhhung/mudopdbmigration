@@ -1,3 +1,8 @@
+/**
+ * StatInfo implementation.
+ * Holds statistical information about a table: block count and record count.
+ */
+
 #include "metadata/statinfo.hpp"
 
 namespace metadata {
