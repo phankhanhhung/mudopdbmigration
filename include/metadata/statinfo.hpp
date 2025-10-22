@@ -1,3 +1,8 @@
+/**
+ * @file statinfo.hpp
+ * @brief Table statistics: block count and record count.
+ */
+
 #ifndef STATINFO_HPP
 #define STATINFO_HPP
 

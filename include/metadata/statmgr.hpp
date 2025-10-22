@@ -1,3 +1,8 @@
+/**
+ * @file statmgr.hpp
+ * @brief Statistics manager with caching and periodic refresh.
+ */
+
 #ifndef STATMGR_HPP
 #define STATMGR_HPP
 

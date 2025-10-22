@@ -1,3 +1,8 @@
+/**
+ * @file viewmgr.hpp
+ * @brief System catalog manager for view definitions.
+ */
+
 #ifndef VIEWMGR_HPP
 #define VIEWMGR_HPP
 

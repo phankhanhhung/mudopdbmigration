@@ -1,3 +1,8 @@
+/**
+ * @file tablemgr.hpp
+ * @brief System catalog manager for table schemas.
+ */
+
 #ifndef TABLEMGR_HPP
 #define TABLEMGR_HPP
 
