@@ -1,3 +1,8 @@
+/**
+ * Lexer implementation.
+ * Tokenizes SQL input into keywords, identifiers, numbers, and delimiters.
+ */
+
 #include "parse/lexer.hpp"
 #include <algorithm>
 #include <stdexcept>

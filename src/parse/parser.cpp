@@ -1,3 +1,9 @@
+/**
+ * Parser implementation.
+ * Recursive-descent parser for SQL SELECT, INSERT, DELETE, UPDATE,
+ * CREATE TABLE, CREATE VIEW, and CREATE INDEX statements.
+ */
+
 #include "parse/parser.hpp"
 
 namespace parse {

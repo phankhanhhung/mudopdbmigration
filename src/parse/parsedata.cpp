@@ -1,3 +1,8 @@
+/**
+ * Parse data structures implementation.
+ * Concrete representations of parsed SQL statements.
+ */
+
 #include "parse/querydata.hpp"
 #include "parse/insertdata.hpp"
 #include "parse/deletedata.hpp"
