@@ -1,3 +1,8 @@
+/**
+ * @file lexer.hpp
+ * @brief SQL tokenizer (lexical analyzer).
+ */
+
 #ifndef LEXER_HPP
 #define LEXER_HPP
 

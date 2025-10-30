@@ -1,3 +1,8 @@
+/**
+ * @file querydata.hpp
+ * @brief Parsed representation of a SELECT query.
+ */
+
 #ifndef QUERYDATA_HPP
 #define QUERYDATA_HPP
 

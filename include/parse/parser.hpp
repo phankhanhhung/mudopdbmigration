@@ -1,3 +1,8 @@
+/**
+ * @file parser.hpp
+ * @brief Recursive-descent SQL parser.
+ */
+
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
