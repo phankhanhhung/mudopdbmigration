@@ -1,3 +1,8 @@
+/**
+ * SelectPlan implementation.
+ * Plan node that applies a selection predicate to filter records.
+ */
+
 #include "plan/selectplan.hpp"
 #include "query/selectscan.hpp"
 #include "record/schema.hpp"

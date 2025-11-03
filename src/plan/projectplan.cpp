@@ -1,3 +1,8 @@
+/**
+ * ProjectPlan implementation.
+ * Plan node that projects specific fields from the input.
+ */
+
 #include "plan/projectplan.hpp"
 #include "query/projectscan.hpp"
 #include "record/schema.hpp"

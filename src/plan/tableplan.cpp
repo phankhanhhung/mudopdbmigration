@@ -1,3 +1,8 @@
+/**
+ * TablePlan implementation.
+ * Plan node for a full table scan, providing cost estimates from table statistics.
+ */
+
 #include "plan/tableplan.hpp"
 #include "record/tablescan.hpp"
 #include "metadata/metadatamgr.hpp"

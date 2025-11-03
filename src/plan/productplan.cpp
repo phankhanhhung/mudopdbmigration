@@ -1,3 +1,8 @@
+/**
+ * ProductPlan implementation.
+ * Plan node computing the Cartesian product of two input plans.
+ */
+
 #include "plan/productplan.hpp"
 #include "query/productscan.hpp"
 #include "record/schema.hpp"
