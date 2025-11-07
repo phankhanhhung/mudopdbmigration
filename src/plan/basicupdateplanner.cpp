@@ -1,3 +1,8 @@
+/**
+ * BasicUpdatePlanner implementation.
+ * Executes INSERT, DELETE, MODIFY, CREATE TABLE, CREATE VIEW, CREATE INDEX.
+ */
+
 #include "plan/basicupdateplanner.hpp"
 #include "plan/tableplan.hpp"
 #include "plan/selectplan.hpp"

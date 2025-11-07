@@ -1,3 +1,9 @@
+/**
+ * BasicQueryPlanner implementation.
+ * Creates a plan tree by taking the product of all tables, then applying
+ * selection and projection. No join optimization.
+ */
+
 #include "plan/basicqueryplanner.hpp"
 #include "plan/tableplan.hpp"
 #include "plan/selectplan.hpp"

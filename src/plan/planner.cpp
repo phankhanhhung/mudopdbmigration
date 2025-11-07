@@ -1,3 +1,9 @@
+/**
+ * Planner implementation.
+ * Top-level planner that delegates to QueryPlanner for SELECTs
+ * and UpdatePlanner for data modification statements.
+ */
+
 #include "plan/planner.hpp"
 #include "parse/parser.hpp"
 #include "parse/querydata.hpp"
