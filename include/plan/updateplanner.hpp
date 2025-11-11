@@ -1,3 +1,8 @@
+/**
+ * @file updateplanner.hpp
+ * @brief Interface for SQL data modification planners.
+ */
+
 #ifndef UPDATEPLANNER_HPP
 #define UPDATEPLANNER_HPP
 

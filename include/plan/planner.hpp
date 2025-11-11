@@ -1,3 +1,8 @@
+/**
+ * @file planner.hpp
+ * @brief Top-level query/update planner facade.
+ */
+
 #ifndef PLANNER_HPP
 #define PLANNER_HPP
 

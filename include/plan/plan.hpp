@@ -1,3 +1,8 @@
+/**
+ * @file plan.hpp
+ * @brief Abstract base class for all query plan nodes.
+ */
+
 #ifndef PLAN_HPP
 #define PLAN_HPP
 

@@ -1,3 +1,8 @@
+/**
+ * @file queryplanner.hpp
+ * @brief Interface for SQL SELECT query planners.
+ */
+
 #ifndef QUERYPLANNER_HPP
 #define QUERYPLANNER_HPP
 
