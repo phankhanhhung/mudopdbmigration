@@ -1,3 +1,8 @@
+/**
+ * TempTable implementation.
+ * Creates temporary tables for materialization of intermediate results.
+ */
+
 #include "materialize/temptable.hpp"
 #include "tx/transaction.hpp"
 #include <atomic>

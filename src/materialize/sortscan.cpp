@@ -1,3 +1,8 @@
+/**
+ * SortScan implementation.
+ * External merge-sort: splits input into sorted runs, then merges them.
+ */
+
 #include "materialize/sortscan.hpp"
 #include <stdexcept>
 

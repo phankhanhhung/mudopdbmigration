@@ -1,3 +1,8 @@
+/**
+ * RecordComparator implementation.
+ * Compares records by a list of field names for sorting.
+ */
+
 #include "materialize/recordcomparator.hpp"
 #include "query/scan.hpp"
 

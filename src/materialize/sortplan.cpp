@@ -1,3 +1,8 @@
+/**
+ * SortPlan implementation.
+ * Plan node that sorts its input by specified fields.
+ */
+
 #include "materialize/sortplan.hpp"
 #include "materialize/sortscan.hpp"
 #include "materialize/materializeplan.hpp"

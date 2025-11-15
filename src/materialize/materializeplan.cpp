@@ -1,3 +1,8 @@
+/**
+ * MaterializePlan implementation.
+ * Materializes a scan's output into a temporary table for repeated access.
+ */
+
 #include "materialize/materializeplan.hpp"
 #include "materialize/temptable.hpp"
 #include "query/scan.hpp"
