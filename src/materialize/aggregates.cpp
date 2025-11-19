@@ -1,3 +1,7 @@
+/**
+ * Aggregation function implementations (CountFn, MaxFn).
+ */
+
 #include "materialize/countfn.hpp"
 #include "materialize/maxfn.hpp"
 #include "materialize/groupvalue.hpp"

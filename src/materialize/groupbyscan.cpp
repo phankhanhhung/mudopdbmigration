@@ -1,3 +1,8 @@
+/**
+ * GroupByScan implementation.
+ * Groups sorted records and computes aggregate values for each group.
+ */
+
 #include "materialize/groupbyscan.hpp"
 #include <stdexcept>
 #include <algorithm>

@@ -1,3 +1,8 @@
+/**
+ * GroupByPlan implementation.
+ * Plan node for GROUP BY with aggregation, built on top of SortPlan.
+ */
+
 #include "materialize/groupbyplan.hpp"
 #include "materialize/groupbyscan.hpp"
 #include "record/schema.hpp"
