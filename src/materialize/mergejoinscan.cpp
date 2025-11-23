@@ -1,3 +1,8 @@
+/**
+ * MergeJoinScan implementation.
+ * Sort-merge join of two sorted scans on a common field.
+ */
+
 #include "materialize/mergejoinscan.hpp"
 
 namespace materialize {

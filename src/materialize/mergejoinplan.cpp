@@ -1,3 +1,8 @@
+/**
+ * MergeJoinPlan implementation.
+ * Plan node for sort-merge join, sorting both inputs before merging.
+ */
+
 #include "materialize/mergejoinplan.hpp"
 #include "materialize/mergejoinscan.hpp"
 #include "materialize/sortscan.hpp"
