@@ -1,3 +1,9 @@
+/**
+ * HeuristicQueryPlanner implementation.
+ * Uses heuristic rules to choose join order: smallest table first,
+ * apply selections early, use indexes when available.
+ */
+
 #include "opt/heuristicqueryplanner.hpp"
 #include "plan/projectplan.hpp"
 #include "parse/querydata.hpp"

@@ -1,3 +1,8 @@
+/**
+ * TablePlanner implementation.
+ * Plans the best way to access a single table: table scan, index select, or index join.
+ */
+
 #include "opt/tableplanner.hpp"
 #include "plan/selectplan.hpp"
 #include "plan/productplan.hpp"
