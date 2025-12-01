@@ -1,3 +1,9 @@
+/**
+ * SimpleDB implementation.
+ * Top-level database engine that wires together FileMgr, LogMgr, BufferMgr,
+ * MetadataMgr, and Planner. Handles database initialization and recovery.
+ */
+
 #include "server/simpledb.hpp"
 #include "plan/basicqueryplanner.hpp"
 #include "plan/basicupdateplanner.hpp"

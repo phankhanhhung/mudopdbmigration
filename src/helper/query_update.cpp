@@ -1,3 +1,7 @@
+/**
+ * Helper functions for executing SQL queries and updates via the API.
+ */
+
 #include "helper/query_update.hpp"
 #include "api/statement.hpp"
 #include "api/result_set.hpp"

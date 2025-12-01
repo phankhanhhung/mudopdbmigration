@@ -1,3 +1,7 @@
+/**
+ * Utility functions for string trimming and formatting.
+ */
+
 #include "helper/utility.hpp"
 #include <algorithm>
 #include <cctype>
