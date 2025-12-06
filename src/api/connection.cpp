@@ -1,3 +1,7 @@
+/**
+ * Connection implementation - manages a database session.
+ */
+
 #include "api/connection.hpp"
 #include "api/statement.hpp"
 #include <iostream>

@@ -1,3 +1,7 @@
+/**
+ * Metadata implementation - provides result set column information.
+ */
+
 #include "api/metadata.hpp"
 #include <memory>
 #include <string>

@@ -1,3 +1,7 @@
+/**
+ * Statement implementation - executes SQL queries and updates.
+ */
+
 #include "api/statement.hpp"
 #include "api/result_set.hpp"
 #include "api/connection.hpp"

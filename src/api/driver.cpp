@@ -1,3 +1,7 @@
+/**
+ * Driver implementation - factory for embedded and network connections.
+ */
+
 #include "api/driver.hpp"
 #include "api/connection.hpp"
 #include <iostream>

@@ -1,3 +1,7 @@
+/**
+ * ResultSet implementation - iterates over query results.
+ */
+
 #include "api/result_set.hpp"
 #include "api/metadata.hpp"
 #include "api/connection.hpp"
