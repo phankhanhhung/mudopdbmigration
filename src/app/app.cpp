@@ -1,3 +1,8 @@
+/**
+ * Application entry point implementation.
+ * Interactive SQL REPL that connects to a database and processes commands.
+ */
+
 #include "app/app.hpp"
 
 #include <iostream>

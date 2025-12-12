@@ -1,3 +1,8 @@
+/**
+ * MudopDB main entry point.
+ * Parses command-line arguments and launches the SQL shell.
+ */
+
 #include <iostream>
 #include "app/app.hpp"
 
