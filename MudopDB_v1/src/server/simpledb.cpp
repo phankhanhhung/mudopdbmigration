@@ -1,6 +1,6 @@
 #include "server/simpledb.hpp"
-#include "plan/basicqueryplanner.hpp"
-#include "plan/basicupdateplanner.hpp"
+#include "opt/heuristicqueryplanner.hpp"
+#include "index/planner/indexupdateplanner.hpp"
 #include <iostream>
 
 namespace server {
@@ -36,8 +36,8 @@ SimpleDB::SimpleDB(const std::string& dirname) : SimpleDB(nullptr, nullptr, null
 
     mdm_ = std::make_shared<metadata::MetadataMgr>(isnew, tx);
 
-    auto qp = std::make_unique<BasicQueryPlanner>(mdm_);
-    auto up = std::make_unique<BasicUpdatePlanner>(mdm_);
+    auto qp = std::make_unique<opt::HeuristicQueryPlanner>(mdm_);
+    auto up = std::make_unique<index::IndexUpdatePlanner>(mdm_);
     planner_ = std::make_shared<Planner>(std::move(qp), std::move(up));
 
     tx->commit();
