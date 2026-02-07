@@ -1,4 +1,6 @@
 #include "server/simpledb.hpp"
+#include "plan/basicqueryplanner.hpp"
+#include "plan/basicupdateplanner.hpp"
 #include <iostream>
 
 namespace server {
@@ -33,6 +35,11 @@ SimpleDB::SimpleDB(const std::string& dirname) : SimpleDB(nullptr, nullptr, null
     }
 
     mdm_ = std::make_shared<metadata::MetadataMgr>(isnew, tx);
+
+    auto qp = std::make_unique<BasicQueryPlanner>(mdm_);
+    auto up = std::make_unique<BasicUpdatePlanner>(mdm_);
+    planner_ = std::make_shared<Planner>(std::move(qp), std::move(up));
+
     tx->commit();
 }
 
@@ -54,6 +61,10 @@ std::shared_ptr<log::LogMgr> SimpleDB::log_mgr() const {
 
 std::shared_ptr<buffer::BufferMgr> SimpleDB::buffer_mgr() const {
     return bm_;
+}
+
+std::shared_ptr<Planner> SimpleDB::planner() const {
+    return planner_;
 }
 
 } // namespace server

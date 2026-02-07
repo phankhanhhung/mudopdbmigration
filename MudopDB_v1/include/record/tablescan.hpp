@@ -4,7 +4,7 @@
 #include "record/recordpage.hpp"
 #include "record/layout.hpp"
 #include "record/rid.hpp"
-#include "query/scan.hpp"
+#include "query/updatescan.hpp"
 #include "query/constant.hpp"
 #include <memory>
 #include <optional>
@@ -19,22 +19,13 @@ namespace record {
 /**
  * TableScan provides sequential access to table records.
  *
- * Implements the Scan interface for reading records.
- * Provides additional methods for updates (insert, delete, set).
- *
+ * Implements the UpdateScan interface for reading and writing records.
  * Uses Transaction layer for all data access.
  *
  * Corresponds to TableScan in Rust (NMDB2/src/record/tablescan.rs)
  */
-class TableScan : public Scan {
+class TableScan : public UpdateScan {
 public:
-    /**
-     * Creates a table scan.
-     *
-     * @param tx the transaction
-     * @param tablename the table name
-     * @param layout the table layout
-     */
     TableScan(std::shared_ptr<tx::Transaction> tx,
               const std::string& tablename,
               const Layout& layout);
@@ -48,15 +39,14 @@ public:
     bool has_field(const std::string& fldname) const override;
     void close() override;
 
-    // Update operations
-    void set_val(const std::string& fldname, const Constant& val);
-    void set_int(const std::string& fldname, int32_t val);
-    void set_string(const std::string& fldname, const std::string& val);
-    void insert();
-    void delete_record();
-
-    std::optional<RID> get_rid() const;
-    void move_to_rid(const RID& rid);
+    // UpdateScan interface implementation
+    void set_val(const std::string& fldname, const Constant& val) override;
+    void set_int(const std::string& fldname, int32_t val) override;
+    void set_string(const std::string& fldname, const std::string& val) override;
+    void insert() override;
+    void delete_record() override;
+    std::optional<RID> get_rid() const override;
+    void move_to_rid(const RID& rid) override;
 
 private:
     void move_to_block(int32_t blknum);

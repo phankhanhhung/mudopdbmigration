@@ -6,6 +6,7 @@
 #include "buffer/buffermgr.hpp"
 #include "metadata/metadatamgr.hpp"
 #include "tx/transaction.hpp"
+#include "plan/planner.hpp"
 #include <memory>
 #include <string>
 #include <optional>
@@ -18,7 +19,6 @@ namespace server {
  *
  * Corresponds to SimpleDB in Rust (NMDB2/src/server/simpledb.rs)
  *
- * Note: Planner integration deferred to later phases.
  */
 class SimpleDB {
 public:
@@ -42,6 +42,7 @@ public:
     std::shared_ptr<file::FileMgr> file_mgr() const;
     std::shared_ptr<log::LogMgr> log_mgr() const;
     std::shared_ptr<buffer::BufferMgr> buffer_mgr() const;
+    std::shared_ptr<Planner> planner() const;
 
 private:
     static constexpr size_t BLOCK_SIZE = 400;
@@ -56,6 +57,7 @@ private:
     std::shared_ptr<log::LogMgr> lm_;
     std::shared_ptr<buffer::BufferMgr> bm_;
     std::shared_ptr<metadata::MetadataMgr> mdm_;
+    std::shared_ptr<Planner> planner_;
 };
 
 } // namespace server
