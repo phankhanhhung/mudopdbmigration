@@ -1,56 +1,54 @@
 #include "record/recordpage.hpp"
+#include "tx/transaction.hpp"
 
 namespace record {
 
-RecordPage::RecordPage(buffer::Buffer& buff, const Layout& layout)
-    : buff_(buff), layout_(layout) {}
+RecordPage::RecordPage(std::shared_ptr<tx::Transaction> tx,
+                       const file::BlockId& blk,
+                       const Layout& layout)
+    : tx_(tx), blk_(blk), layout_(layout) {
+    tx_->pin(blk_);
+}
 
 int32_t RecordPage::get_int(size_t slot, const std::string& fldname) {
     size_t fldpos = offset(slot) + layout_.offset(fldname);
-    return buff_.contents().get_int(fldpos);
+    return tx_->get_int(blk_, fldpos);
 }
 
 std::string RecordPage::get_string(size_t slot, const std::string& fldname) {
     size_t fldpos = offset(slot) + layout_.offset(fldname);
-    return buff_.contents().get_string(fldpos);
+    return tx_->get_string(blk_, fldpos);
 }
 
 void RecordPage::set_int(size_t slot, const std::string& fldname, int32_t val) {
     size_t fldpos = offset(slot) + layout_.offset(fldname);
-    buff_.contents().set_int(fldpos, val);
-    buff_.set_modified(0, std::nullopt);  // Mark buffer as dirty (txnum=0 for Phase 4)
+    tx_->set_int(blk_, fldpos, val, true);
 }
 
 void RecordPage::set_string(size_t slot, const std::string& fldname, const std::string& val) {
     size_t fldpos = offset(slot) + layout_.offset(fldname);
-    buff_.contents().set_string(fldpos, val);
-    buff_.set_modified(0, std::nullopt);  // Mark buffer as dirty (txnum=0 for Phase 4)
+    tx_->set_string(blk_, fldpos, val, true);
 }
 
 void RecordPage::delete_record(size_t slot) {
     set_flag(slot, Flag::EMPTY);
-    buff_.set_modified(0, std::nullopt);  // Mark buffer as dirty (txnum=0 for Phase 4)
 }
 
 void RecordPage::format() {
     size_t slot = 0;
     while (is_valid_slot(slot)) {
-        // Set flag to EMPTY
-        buff_.contents().set_int(offset(slot), static_cast<int32_t>(Flag::EMPTY));
+        tx_->set_int(blk_, offset(slot), static_cast<int32_t>(Flag::EMPTY), false);
 
-        // Initialize fields to zero/empty
         for (const auto& fldname : layout_.schema()->fields()) {
             size_t fldpos = offset(slot) + layout_.offset(fldname);
-
             if (layout_.schema()->type(fldname) == Type::INTEGER) {
-                buff_.contents().set_int(fldpos, 0);
+                tx_->set_int(blk_, fldpos, 0, false);
             } else {
-                buff_.contents().set_string(fldpos, "");
+                tx_->set_string(blk_, fldpos, "", false);
             }
         }
         slot++;
     }
-    buff_.set_modified(0, std::nullopt);  // Mark buffer as dirty (txnum=0 for Phase 4)
 }
 
 std::optional<size_t> RecordPage::next_after(std::optional<size_t> slot) {
@@ -61,29 +59,24 @@ std::optional<size_t> RecordPage::insert_after(std::optional<size_t> slot) {
     std::optional<size_t> newslot = search_after(slot, Flag::EMPTY);
     if (newslot.has_value()) {
         set_flag(newslot.value(), Flag::USED);
-        buff_.set_modified(0, std::nullopt);  // Mark buffer as dirty (txnum=0 for Phase 4)
     }
     return newslot;
 }
 
 const file::BlockId& RecordPage::block() const {
-    return buff_.block().value();
+    return blk_;
 }
 
 void RecordPage::set_flag(size_t slot, Flag flag) {
-    buff_.contents().set_int(offset(slot), static_cast<int32_t>(flag));
-}
-
-RecordPage::Flag RecordPage::get_flag(size_t slot) {
-    int32_t flag_val = buff_.contents().get_int(offset(slot));
-    return static_cast<Flag>(flag_val);
+    tx_->set_int(blk_, offset(slot), static_cast<int32_t>(flag), true);
 }
 
 std::optional<size_t> RecordPage::search_after(std::optional<size_t> slot, Flag flag) {
     size_t current = slot.has_value() ? slot.value() + 1 : 0;
+    int32_t f = static_cast<int32_t>(flag);
 
     while (is_valid_slot(current)) {
-        if (get_flag(current) == flag) {
+        if (tx_->get_int(blk_, offset(current)) == f) {
             return current;
         }
         current++;
@@ -93,7 +86,7 @@ std::optional<size_t> RecordPage::search_after(std::optional<size_t> slot, Flag 
 }
 
 bool RecordPage::is_valid_slot(size_t slot) const {
-    return offset(slot + 1) <= buff_.contents().size();
+    return offset(slot + 1) <= tx_->block_size();
 }
 
 size_t RecordPage::offset(size_t slot) const {

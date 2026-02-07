@@ -2,6 +2,7 @@
 #include "record/tablescan.hpp"
 #include "record/layout.hpp"
 #include "record/schema.hpp"
+#include "tx/transaction.hpp"
 #include "buffer/buffermgr.hpp"
 #include "file/filemgr.hpp"
 #include "log/logmgr.hpp"
@@ -31,18 +32,15 @@ protected:
     std::unique_ptr<Layout> layout;
 
     void SetUp() override {
-        // Clean up test directory
         if (fs::exists(test_dir)) {
             fs::remove_all(test_dir);
         }
         fs::create_directories(test_dir);
 
-        // Create managers
         fm = std::make_shared<FileMgr>(test_dir, blocksize);
         lm = std::make_shared<LogMgr>(fm, logfile);
         bm = std::make_shared<BufferMgr>(fm, lm, 8);
 
-        // Create schema: {id: INT, name: VARCHAR(20), age: INT}
         schema = std::make_shared<Schema>();
         schema->add_int_field("id");
         schema->add_string_field("name", 20);
@@ -52,7 +50,6 @@ protected:
     }
 
     void TearDown() override {
-        // Clean up test directory
         if (fs::exists(test_dir)) {
             fs::remove_all(test_dir);
         }
@@ -64,24 +61,25 @@ protected:
 // ============================================================================
 
 TEST_F(TableScanTest, CreateEmptyTable) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
-    // New table should have no records
     scan.before_first();
     EXPECT_FALSE(scan.next());
 
     scan.close();
+    tx->commit();
 }
 
 TEST_F(TableScanTest, InsertSingleRecord) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
     scan.insert();
     scan.set_int("id", 1);
     scan.set_string("name", "Alice");
     scan.set_int("age", 25);
 
-    // Scan the record back
     scan.before_first();
     ASSERT_TRUE(scan.next());
 
@@ -89,15 +87,16 @@ TEST_F(TableScanTest, InsertSingleRecord) {
     EXPECT_EQ(scan.get_string("name"), "Alice");
     EXPECT_EQ(scan.get_int("age"), 25);
 
-    EXPECT_FALSE(scan.next());  // Only one record
+    EXPECT_FALSE(scan.next());
 
     scan.close();
+    tx->commit();
 }
 
 TEST_F(TableScanTest, InsertMultipleRecords) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
-    // Insert three records
     scan.insert();
     scan.set_int("id", 1);
     scan.set_string("name", "Alice");
@@ -113,7 +112,6 @@ TEST_F(TableScanTest, InsertMultipleRecords) {
     scan.set_string("name", "Charlie");
     scan.set_int("age", 35);
 
-    // Scan all records
     scan.before_first();
 
     ASSERT_TRUE(scan.next());
@@ -128,12 +126,13 @@ TEST_F(TableScanTest, InsertMultipleRecords) {
     EXPECT_FALSE(scan.next());
 
     scan.close();
+    tx->commit();
 }
 
 TEST_F(TableScanTest, ScanAllRecords) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
-    // Insert 5 records
     for (int i = 1; i <= 5; i++) {
         scan.insert();
         scan.set_int("id", i);
@@ -141,7 +140,6 @@ TEST_F(TableScanTest, ScanAllRecords) {
         scan.set_int("age", 20 + i);
     }
 
-    // Count records
     scan.before_first();
     int count = 0;
     while (scan.next()) {
@@ -151,12 +149,13 @@ TEST_F(TableScanTest, ScanAllRecords) {
     EXPECT_EQ(count, 5);
 
     scan.close();
+    tx->commit();
 }
 
 TEST_F(TableScanTest, DeleteRecord) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
-    // Insert three records
     scan.insert();
     scan.set_int("id", 1);
 
@@ -166,7 +165,6 @@ TEST_F(TableScanTest, DeleteRecord) {
     scan.insert();
     scan.set_int("id", 3);
 
-    // Delete record with id=2
     scan.before_first();
     while (scan.next()) {
         if (scan.get_int("id") == 2) {
@@ -175,7 +173,6 @@ TEST_F(TableScanTest, DeleteRecord) {
         }
     }
 
-    // Verify only 2 records remain
     scan.before_first();
     std::vector<int> ids;
     while (scan.next()) {
@@ -187,25 +184,24 @@ TEST_F(TableScanTest, DeleteRecord) {
     EXPECT_EQ(ids[1], 3);
 
     scan.close();
+    tx->commit();
 }
 
 TEST_F(TableScanTest, UpdateRecord) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
-    // Insert a record
     scan.insert();
     scan.set_int("id", 1);
     scan.set_string("name", "Alice");
     scan.set_int("age", 25);
 
-    // Update the record
     scan.before_first();
     ASSERT_TRUE(scan.next());
 
     scan.set_string("name", "Alicia");
     scan.set_int("age", 26);
 
-    // Verify update
     scan.before_first();
     ASSERT_TRUE(scan.next());
 
@@ -214,16 +210,16 @@ TEST_F(TableScanTest, UpdateRecord) {
     EXPECT_EQ(scan.get_int("age"), 26);
 
     scan.close();
+    tx->commit();
 }
 
 TEST_F(TableScanTest, GetRID) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
-    // Insert a record
     scan.insert();
     scan.set_int("id", 1);
 
-    // Get RID
     scan.before_first();
     ASSERT_TRUE(scan.next());
 
@@ -234,12 +230,13 @@ TEST_F(TableScanTest, GetRID) {
     EXPECT_EQ(rid.value().slot(), 0);
 
     scan.close();
+    tx->commit();
 }
 
 TEST_F(TableScanTest, MoveToRID) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
-    // Insert three records and save second RID
     scan.insert();
     scan.set_int("id", 1);
 
@@ -255,20 +252,19 @@ TEST_F(TableScanTest, MoveToRID) {
     scan.insert();
     scan.set_int("id", 3);
 
-    // Move to specific RID
     scan.move_to_rid(target_rid);
 
     EXPECT_EQ(scan.get_int("id"), 2);
     EXPECT_EQ(scan.get_string("name"), "Target");
 
     scan.close();
+    tx->commit();
 }
 
 TEST_F(TableScanTest, MultipleBlocks) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
-    // Insert many records to span multiple blocks
-    // Slot size = 36, block size = 400, so ~11 records per block
     int num_records = 30;
 
     for (int i = 1; i <= num_records; i++) {
@@ -278,7 +274,6 @@ TEST_F(TableScanTest, MultipleBlocks) {
         scan.set_int("age", 20 + i);
     }
 
-    // Verify all records
     scan.before_first();
     int count = 0;
     while (scan.next()) {
@@ -287,33 +282,28 @@ TEST_F(TableScanTest, MultipleBlocks) {
     }
 
     EXPECT_EQ(count, num_records);
-
-    // Verify table spans multiple blocks
-    EXPECT_GT(fm->length("students.tbl"), 2);
+    EXPECT_GT(fm->length("students.tbl"), 2u);
 
     scan.close();
+    tx->commit();
 }
 
 TEST_F(TableScanTest, InsertIntoFullPage) {
-    TableScan scan(bm, "students", *layout);
+    auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
+    TableScan scan(tx, "students", *layout);
 
-    // Fill first page (11 records with slot size 36)
     for (int i = 1; i <= 11; i++) {
         scan.insert();
         scan.set_int("id", i);
     }
 
-    // Verify first page is full - table has 1 block
-    EXPECT_EQ(fm->length("students.tbl"), 1);
+    EXPECT_EQ(fm->length("students.tbl"), 1u);
 
-    // Insert one more - should create new block
     scan.insert();
     scan.set_int("id", 12);
 
-    // Verify new block was created
-    EXPECT_EQ(fm->length("students.tbl"), 2);
+    EXPECT_EQ(fm->length("students.tbl"), 2u);
 
-    // Verify all 12 records accessible
     scan.before_first();
     int count = 0;
     while (scan.next()) {
@@ -322,6 +312,7 @@ TEST_F(TableScanTest, InsertIntoFullPage) {
     EXPECT_EQ(count, 12);
 
     scan.close();
+    tx->commit();
 }
 
 // main() is provided by gtest_main

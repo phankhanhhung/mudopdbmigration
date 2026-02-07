@@ -1,16 +1,15 @@
 #include "record/tablescan.hpp"
+#include "tx/transaction.hpp"
 
 namespace record {
 
-TableScan::TableScan(std::shared_ptr<buffer::BufferMgr> bm,
+TableScan::TableScan(std::shared_ptr<tx::Transaction> tx,
                      const std::string& tablename,
                      const Layout& layout)
-    : bm_(bm), layout_(layout), filename_(tablename + ".tbl"),
-      currentslot_(std::nullopt), current_buffer_idx_(std::nullopt) {
+    : tx_(tx), layout_(layout), filename_(tablename + ".tbl"),
+      currentslot_(std::nullopt) {
 
-    // If table file has blocks, move to first block
-    // Otherwise, create the first block
-    if (bm_->file_mgr()->length(filename_) == 0) {
+    if (tx_->size(filename_) == 0) {
         move_to_new_block();
     } else {
         move_to_block(0);
@@ -55,9 +54,8 @@ bool TableScan::has_field(const std::string& fldname) const {
 }
 
 void TableScan::close() {
-    if (current_buffer_idx_.has_value()) {
-        bm_->unpin(current_buffer_idx_.value());
-        current_buffer_idx_ = std::nullopt;
+    if (rp_) {
+        tx_->unpin(rp_->block());
     }
 }
 
@@ -104,32 +102,27 @@ std::optional<RID> TableScan::get_rid() const {
 void TableScan::move_to_rid(const RID& rid) {
     close();
     file::BlockId blk(filename_, rid.block_number());
-    current_buffer_idx_ = bm_->pin(blk);
-    rp_ = std::make_unique<RecordPage>(bm_->buffer(current_buffer_idx_.value()), layout_);
+    rp_ = std::make_unique<RecordPage>(tx_, blk, layout_);
     currentslot_ = rid.slot();
 }
 
 void TableScan::move_to_block(int32_t blknum) {
     close();
-
     file::BlockId blk(filename_, blknum);
-    current_buffer_idx_ = bm_->pin(blk);
-    rp_ = std::make_unique<RecordPage>(bm_->buffer(current_buffer_idx_.value()), layout_);
+    rp_ = std::make_unique<RecordPage>(tx_, blk, layout_);
     currentslot_ = std::nullopt;
 }
 
 void TableScan::move_to_new_block() {
     close();
-
-    file::BlockId blk = bm_->file_mgr()->append(filename_);
-    current_buffer_idx_ = bm_->pin(blk);
-    rp_ = std::make_unique<RecordPage>(bm_->buffer(current_buffer_idx_.value()), layout_);
+    file::BlockId blk = tx_->append(filename_);
+    rp_ = std::make_unique<RecordPage>(tx_, blk, layout_);
     rp_->format();
     currentslot_ = std::nullopt;
 }
 
 bool TableScan::at_last_block() const {
-    return rp_->block().number() == bm_->file_mgr()->length(filename_) - 1;
+    return rp_->block().number() == static_cast<int32_t>(tx_->size(filename_)) - 1;
 }
 
 } // namespace record
