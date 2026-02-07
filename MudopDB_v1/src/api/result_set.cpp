@@ -1,120 +1,95 @@
 #include "api/result_set.hpp"
 #include "api/metadata.hpp"
 #include "api/connection.hpp"
-#include <memory>
-#include <string>
+#include "plan/plan.hpp"
+#include "query/scan.hpp"
+#include "record/schema.hpp"
 #include <algorithm>
 #include <cctype>
+#include <memory>
+#include <string>
 
-// Helper function to convert string to lowercase
-// Corresponds to fldname.to_lowercase() in Rust
 static std::string to_lowercase(const std::string& str) {
-	std::string result = str;
-	std::transform(result.begin(), result.end(), result.begin(),
-		[](unsigned char c) { return std::tolower(c); });
-	return result;
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    return result;
 }
 
 // ============================================================================
-// EmbeddedResultSet implementation
+// EmbeddedResultSet
 // ============================================================================
 
-EmbeddedResultSet::EmbeddedResultSet(std::shared_ptr<Plan> plan, std::shared_ptr<EmbeddedConnection> c)
-	: s(nullptr), sch(nullptr), conn(std::move(c)) {
-	// Corresponds to EmbeddedResultSet::new in embeddedresultset.rs:23-32
-	if (plan) {
-		// TODO: Once Plan::open() and Plan::schema() are migrated, uncomment:
-		// s = plan->open();
-		// sch = plan->schema();
-		(void)plan; // Suppress unused parameter warning until Plan is migrated
-	}
-	// For now, initialize with defaults
-	sch = std::make_shared<record::Schema>();
+EmbeddedResultSet::EmbeddedResultSet(std::shared_ptr<Plan> plan,
+                                     std::shared_ptr<EmbeddedConnection> c)
+    : s_(nullptr), sch_(nullptr), conn_(std::move(c)) {
+    if (plan) {
+        s_ = plan->open();
+        sch_ = plan->schema();
+    }
 }
 
 bool EmbeddedResultSet::next() {
-	// Corresponds to embeddedresultset.rs:36-42
-	if (s) {
-		try {
-			return s->next();
-		} catch (const std::exception&) {
-			// On error, rollback and return false
-			if (conn) {
-				conn->rollback();
-			}
-			return false;
-		}
-	}
-	return false; // No scan available
+    if (s_) {
+        try {
+            return s_->next();
+        } catch (...) {
+            if (conn_) conn_->rollback();
+            return false;
+        }
+    }
+    return false;
 }
 
-std::int32_t EmbeddedResultSet::get_int(std::string fldname) {
-	// Corresponds to embeddedresultset.rs:44-51
-	std::string fldname_lower = to_lowercase(fldname);
-
-	if (s) {
-		try {
-			return s->get_int(fldname_lower);
-		} catch (const std::exception&) {
-			// On error, rollback and return 0
-			if (conn) {
-				conn->rollback();
-			}
-			return 0;
-		}
-	}
-	return 0; // No scan available
+int32_t EmbeddedResultSet::get_int(const std::string& fldname) {
+    std::string fld = to_lowercase(fldname);
+    if (s_) {
+        try {
+            return s_->get_int(fld);
+        } catch (...) {
+            if (conn_) conn_->rollback();
+            return 0;
+        }
+    }
+    return 0;
 }
 
-std::string EmbeddedResultSet::get_string(std::string fldname) {
-	// Corresponds to embeddedresultset.rs:53-60
-	std::string fldname_lower = to_lowercase(fldname);
-
-	if (s) {
-		try {
-			return s->get_string(fldname_lower);
-		} catch (const std::exception&) {
-			// On error, rollback and return empty string
-			if (conn) {
-				conn->rollback();
-			}
-			return "";
-		}
-	}
-	return ""; // No scan available
+std::string EmbeddedResultSet::get_string(const std::string& fldname) {
+    std::string fld = to_lowercase(fldname);
+    if (s_) {
+        try {
+            return s_->get_string(fld);
+        } catch (...) {
+            if (conn_) conn_->rollback();
+            return "";
+        }
+    }
+    return "";
 }
 
-const Metadata* EmbeddedResultSet::get_meta_data() const noexcept {
-	// Corresponds to embeddedresultset.rs:62-64
-	static EmbeddedMetadata md{std::make_shared<record::Schema>()};
-	// TODO: Once migration is complete, return proper metadata:
-	// static EmbeddedMetadata md{sch};
-	// return &md;
-	return &md;
+std::unique_ptr<Metadata> EmbeddedResultSet::get_meta_data() const {
+    return std::make_unique<EmbeddedMetadata>(sch_);
 }
 
 void EmbeddedResultSet::close() {
-	// Corresponds to embeddedresultset.rs:66-69
-	if (s) {
-		s->close();
-	}
-	if (conn) {
-		conn->close();
-	}
+    if (s_) s_->close();
+    if (conn_) conn_->close();
 }
 
-// NetworkResultSet
-NetworkResultSet::NetworkResultSet(std::shared_ptr<NetworkConnection> /*conn*/, int64_t /*id*/) {}
+// ============================================================================
+// NetworkResultSet (stub)
+// ============================================================================
+
+NetworkResultSet::NetworkResultSet(std::shared_ptr<NetworkConnection>, int64_t) {}
 
 bool NetworkResultSet::next() { return false; }
 
-std::int32_t NetworkResultSet::get_int(std::string /*fldname*/) { return 0; }
+int32_t NetworkResultSet::get_int(const std::string&) { return 0; }
 
-std::string NetworkResultSet::get_string(std::string /*fldname*/) { return {}; }
+std::string NetworkResultSet::get_string(const std::string&) { return {}; }
 
-const Metadata* NetworkResultSet::get_meta_data() const noexcept {
-	static NetworkMetadata md{std::shared_ptr<NetworkConnection>{}, 0};
-	return &md;
+std::unique_ptr<Metadata> NetworkResultSet::get_meta_data() const {
+    return std::make_unique<NetworkMetadata>(std::shared_ptr<NetworkConnection>{}, 0);
 }
 
-void NetworkResultSet::close() { /* no-op for mock */ }
+void NetworkResultSet::close() {}

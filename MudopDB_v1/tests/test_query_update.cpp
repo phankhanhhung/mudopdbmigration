@@ -74,7 +74,7 @@ public:
     return true;
   }
 
-  std::int32_t get_int(std::string fldname) override {
+  int32_t get_int(const std::string& fldname) override {
     if (current_row_ < 0 || current_row_ >= static_cast<int>(rows_.size())) {
       return 0;
     }
@@ -82,7 +82,7 @@ public:
     return (it != rows_[current_row_].int_values.end()) ? it->second : 0;
   }
 
-  std::string get_string(std::string fldname) override {
+  std::string get_string(const std::string& fldname) override {
     if (current_row_ < 0 || current_row_ >= static_cast<int>(rows_.size())) {
       return "";
     }
@@ -90,8 +90,12 @@ public:
     return (it != rows_[current_row_].string_values.end()) ? it->second : "";
   }
 
-  const Metadata* get_meta_data() const noexcept override {
-    return metadata_.get();
+  std::unique_ptr<Metadata> get_meta_data() const override {
+    // Clone metadata columns for each call
+    auto* mm = dynamic_cast<const MockMetadata*>(metadata_.get());
+    if (!mm) return std::make_unique<MockMetadata>(std::vector<MockMetadata::ColumnDef>{});
+    // We need to reconstruct. Store columns for cloning.
+    return std::make_unique<MockMetadata>(columns_copy_);
   }
 
   void close() override {
@@ -100,12 +104,25 @@ public:
 
   bool is_closed() const { return closed_; }
 
+  // Store columns for cloning in get_meta_data
+  std::vector<MockMetadata::ColumnDef> columns_copy_;
+
 private:
   std::vector<Row> rows_;
   std::unique_ptr<Metadata> metadata_;
   int current_row_;
   bool closed_;
 };
+
+// Helper to create MockResultSet with proper metadata cloning support
+static std::unique_ptr<MockResultSet> make_mock_rs(
+    std::vector<MockResultSet::Row> rows,
+    std::vector<MockMetadata::ColumnDef> columns) {
+  auto metadata = std::make_unique<MockMetadata>(columns);
+  auto rs = std::make_unique<MockResultSet>(std::move(rows), std::move(metadata));
+  rs->columns_copy_ = std::move(columns);
+  return rs;
+}
 
 // ============================================================================
 // Mock Statement
@@ -122,12 +139,12 @@ public:
     update_count_ = count;
   }
 
-  std::unique_ptr<ResultSet> execute_query(std::string qry) override {
+  std::unique_ptr<ResultSet> execute_query(const std::string& qry) override {
     last_query_cmd_ = qry;
     return std::move(query_result_);
   }
 
-  size_t execute_update(std::string cmd) override {
+  size_t execute_update(const std::string& cmd) override {
     last_update_cmd_ = cmd;
     return update_count_;
   }
@@ -148,9 +165,7 @@ private:
 
 TEST(DoQueryTest, ExecutesQueryWithCorrectCommand) {
   auto stmt = std::make_unique<MockStatement>();
-  auto metadata = std::make_unique<MockMetadata>(std::vector<MockMetadata::ColumnDef>{});
-  auto rs = std::make_unique<MockResultSet>(std::vector<MockResultSet::Row>{}, std::move(metadata));
-
+  auto rs = make_mock_rs({}, {});
   stmt->set_query_result(std::move(rs));
 
   auto out = capture([&]{ do_query(stmt.get(), "SELECT * FROM users"); });
@@ -161,12 +176,10 @@ TEST(DoQueryTest, ExecutesQueryWithCorrectCommand) {
 
 TEST(DoQueryTest, HandlesEmptyResultSet) {
   auto stmt = std::make_unique<MockStatement>();
-  auto metadata = std::make_unique<MockMetadata>(std::vector<MockMetadata::ColumnDef>{
+  auto rs = make_mock_rs({}, {
     {"id", record::Type::INTEGER, 10},
     {"name", record::Type::VARCHAR, 20}
   });
-  auto rs = std::make_unique<MockResultSet>(std::vector<MockResultSet::Row>{}, std::move(metadata));
-
   stmt->set_query_result(std::move(rs));
 
   auto out = capture([&]{ do_query(stmt.get(), "SELECT * FROM empty_table"); });
@@ -175,22 +188,13 @@ TEST(DoQueryTest, HandlesEmptyResultSet) {
 }
 
 TEST(DoQueryTest, DisplaysIntegerColumn) {
-  auto stmt = std::make_unique<MockStatement>();
-  auto metadata = std::make_unique<MockMetadata>(std::vector<MockMetadata::ColumnDef>{
-    {"id", record::Type::INTEGER, 10}
-  });
-
   MockResultSet::Row row1;
   row1.int_values["id"] = 42;
-
   MockResultSet::Row row2;
   row2.int_values["id"] = 99;
 
-  auto rs = std::make_unique<MockResultSet>(
-    std::vector<MockResultSet::Row>{row1, row2},
-    std::move(metadata)
-  );
-
+  auto stmt = std::make_unique<MockStatement>();
+  auto rs = make_mock_rs({row1, row2}, {{"id", record::Type::INTEGER, 10}});
   stmt->set_query_result(std::move(rs));
 
   auto out = capture([&]{ do_query(stmt.get(), "SELECT id FROM table1"); });
@@ -200,22 +204,13 @@ TEST(DoQueryTest, DisplaysIntegerColumn) {
 }
 
 TEST(DoQueryTest, DisplaysVarcharColumn) {
-  auto stmt = std::make_unique<MockStatement>();
-  auto metadata = std::make_unique<MockMetadata>(std::vector<MockMetadata::ColumnDef>{
-    {"name", record::Type::VARCHAR, 20}
-  });
-
   MockResultSet::Row row1;
   row1.string_values["name"] = "Alice";
-
   MockResultSet::Row row2;
   row2.string_values["name"] = "Bob";
 
-  auto rs = std::make_unique<MockResultSet>(
-    std::vector<MockResultSet::Row>{row1, row2},
-    std::move(metadata)
-  );
-
+  auto stmt = std::make_unique<MockStatement>();
+  auto rs = make_mock_rs({row1, row2}, {{"name", record::Type::VARCHAR, 20}});
   stmt->set_query_result(std::move(rs));
 
   auto out = capture([&]{ do_query(stmt.get(), "SELECT name FROM users"); });
@@ -225,28 +220,21 @@ TEST(DoQueryTest, DisplaysVarcharColumn) {
 }
 
 TEST(DoQueryTest, DisplaysMultipleColumns) {
-  auto stmt = std::make_unique<MockStatement>();
-  auto metadata = std::make_unique<MockMetadata>(std::vector<MockMetadata::ColumnDef>{
-    {"id", record::Type::INTEGER, 10},
-    {"name", record::Type::VARCHAR, 20},
-    {"age", record::Type::INTEGER, 5}
-  });
-
   MockResultSet::Row row1;
   row1.int_values["id"] = 1;
   row1.string_values["name"] = "Alice";
   row1.int_values["age"] = 30;
-
   MockResultSet::Row row2;
   row2.int_values["id"] = 2;
   row2.string_values["name"] = "Bob";
   row2.int_values["age"] = 25;
 
-  auto rs = std::make_unique<MockResultSet>(
-    std::vector<MockResultSet::Row>{row1, row2},
-    std::move(metadata)
-  );
-
+  auto stmt = std::make_unique<MockStatement>();
+  auto rs = make_mock_rs({row1, row2}, {
+    {"id", record::Type::INTEGER, 10},
+    {"name", record::Type::VARCHAR, 20},
+    {"age", record::Type::INTEGER, 5}
+  });
   stmt->set_query_result(std::move(rs));
 
   auto out = capture([&]{ do_query(stmt.get(), "SELECT * FROM users"); });
@@ -260,16 +248,14 @@ TEST(DoQueryTest, DisplaysMultipleColumns) {
 }
 
 TEST(DoQueryTest, ClosesResultSetAfterCompletion) {
-  auto stmt = std::make_unique<MockStatement>();
-  auto metadata = std::make_unique<MockMetadata>(std::vector<MockMetadata::ColumnDef>{
-    {"id", record::Type::INTEGER, 10}
-  });
-
   MockResultSet::Row row;
   row.int_values["id"] = 1;
 
-  auto rs_ptr = new MockResultSet(std::vector<MockResultSet::Row>{row}, std::move(metadata));
-  stmt->set_query_result(std::unique_ptr<ResultSet>(rs_ptr));
+  auto rs = make_mock_rs({row}, {{"id", record::Type::INTEGER, 10}});
+  auto* rs_ptr = rs.get();
+
+  auto stmt = std::make_unique<MockStatement>();
+  stmt->set_query_result(std::move(rs));
 
   capture([&]{ do_query(stmt.get(), "SELECT id FROM test"); });
 

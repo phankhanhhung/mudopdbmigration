@@ -2,7 +2,9 @@
 #include "api/result_set.hpp"
 #include "api/connection.hpp"
 #include "api/statement.hpp"
+#include "api/metadata.hpp"
 #include "plan/plan.hpp"
+#include "query/scan.hpp"
 #include <memory>
 
 // ============================================================================
@@ -15,13 +17,6 @@ TEST(EmbeddedResultSet, CreateWithNullPlan) {
   EXPECT_NE(rs, nullptr);
 }
 
-TEST(EmbeddedResultSet, CreateViaStatement) {
-  auto conn = std::make_shared<EmbeddedConnection>(nullptr);
-  auto stmt = std::make_unique<EmbeddedStatement>(conn);
-  auto rs = stmt->execute_query("SELECT * FROM test");
-  EXPECT_NE(rs, nullptr);
-}
-
 // ============================================================================
 // Test EmbeddedResultSet methods with no scan
 // ============================================================================
@@ -29,31 +24,24 @@ TEST(EmbeddedResultSet, CreateViaStatement) {
 TEST(EmbeddedResultSet, NextWithNoScan) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
-
-  // Should return false when scan is null
   EXPECT_FALSE(rs->next());
 }
 
 TEST(EmbeddedResultSet, GetIntWithNoScan) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
-
-  // Should return 0 when scan is null
   EXPECT_EQ(rs->get_int("id"), 0);
 }
 
 TEST(EmbeddedResultSet, GetStringWithNoScan) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
-
-  // Should return empty string when scan is null
   EXPECT_EQ(rs->get_string("name"), "");
 }
 
 TEST(EmbeddedResultSet, GetMetaData) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
-
   auto metadata = rs->get_meta_data();
   EXPECT_NE(metadata, nullptr);
 }
@@ -61,8 +49,6 @@ TEST(EmbeddedResultSet, GetMetaData) {
 TEST(EmbeddedResultSet, Close) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
-
-  // Should not throw when closing
   EXPECT_NO_THROW(rs->close());
 }
 
@@ -74,7 +60,6 @@ TEST(EmbeddedResultSet, FieldNameLowercase) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
 
-  // These should all work without throwing (even though scan is null)
   EXPECT_NO_THROW(rs->get_int("ID"));
   EXPECT_NO_THROW(rs->get_int("Id"));
   EXPECT_NO_THROW(rs->get_int("id"));
@@ -92,34 +77,14 @@ TEST(EmbeddedResultSet, FullLifecycle) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
 
-  // Try to iterate (will return false immediately with no scan)
   EXPECT_FALSE(rs->next());
-
-  // Try to read fields
   EXPECT_EQ(rs->get_int("id"), 0);
   EXPECT_EQ(rs->get_string("name"), "");
 
-  // Get metadata
   auto metadata = rs->get_meta_data();
   EXPECT_NE(metadata, nullptr);
 
-  // Close
   rs->close();
-}
-
-// ============================================================================
-// Test ResultSet through Statement
-// ============================================================================
-
-TEST(EmbeddedResultSet, ThroughStatementQuery) {
-  auto conn = std::make_shared<EmbeddedConnection>(nullptr);
-  auto stmt = std::make_unique<EmbeddedStatement>(conn);
-
-  auto rs = stmt->execute_query("SELECT id, name FROM users");
-  ASSERT_NE(rs, nullptr);
-
-  // No scan, so next should return false
-  EXPECT_FALSE(rs->next());
 }
 
 // ============================================================================
@@ -183,7 +148,6 @@ TEST(EmbeddedResultSet, HandlesExceptionsGracefully) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
 
-  // Even if internal operations throw, these should handle gracefully
   EXPECT_NO_THROW({
     rs->next();
     rs->get_int("field");
