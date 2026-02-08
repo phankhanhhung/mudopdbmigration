@@ -1,4 +1,5 @@
 #include "server/simpledb.hpp"
+#include "file/memfilemgr.hpp"
 #include "opt/heuristicqueryplanner.hpp"
 #include "index/planner/indexupdateplanner.hpp"
 #include <iostream>
@@ -41,6 +42,24 @@ SimpleDB::SimpleDB(const std::string& dirname) : SimpleDB(nullptr, nullptr, null
     planner_ = std::make_shared<Planner>(std::move(qp), std::move(up));
 
     tx->commit();
+}
+
+SimpleDB SimpleDB::in_memory() {
+    auto fm = std::make_shared<file::MemFileMgr>(BLOCK_SIZE);
+    auto lm = std::make_shared<log::LogMgr>(fm, LOG_FILE);
+    auto bm = std::make_shared<buffer::BufferMgr>(fm, lm, BUFFER_SIZE);
+
+    SimpleDB db(fm, lm, bm);
+
+    auto tx = db.new_tx();
+    db.mdm_ = std::make_shared<metadata::MetadataMgr>(true, tx);
+
+    auto qp = std::make_unique<opt::HeuristicQueryPlanner>(db.mdm_);
+    auto up = std::make_unique<::index::IndexUpdatePlanner>(db.mdm_);
+    db.planner_ = std::make_shared<Planner>(std::move(qp), std::move(up));
+
+    tx->commit();
+    return db;
 }
 
 std::shared_ptr<tx::Transaction> SimpleDB::new_tx() {

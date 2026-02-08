@@ -14,6 +14,11 @@ static std::string extract_dbname(const std::string& url) {
 }
 
 std::unique_ptr<Connection> EmbeddedDriver::connect(const std::string& url) {
+    // "mem:" or ":memory:" -> in-memory mode
+    if (url == "mem:" || url == ":memory:" || url.find("mem:") == 0) {
+        auto db = std::make_shared<server::SimpleDB>(server::SimpleDB::in_memory());
+        return std::make_unique<EmbeddedConnection>(db);
+    }
     std::string dbname = extract_dbname(url);
     auto db = std::make_shared<server::SimpleDB>(dbname);
     return std::make_unique<EmbeddedConnection>(db);

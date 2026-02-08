@@ -7,6 +7,9 @@ namespace fs = std::filesystem;
 
 namespace file {
 
+FileMgr::FileMgr(size_t blocksize, bool is_new)
+    : db_directory_(), blocksize_(blocksize), is_new_(is_new) {}
+
 FileMgr::FileMgr(const std::string& db_directory, size_t blocksize)
     : db_directory_(db_directory), blocksize_(blocksize), is_new_(false) {
 

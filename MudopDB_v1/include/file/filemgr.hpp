@@ -29,6 +29,8 @@ public:
      */
     FileMgr(const std::string& db_directory, size_t blocksize);
 
+    virtual ~FileMgr() = default;
+
     /**
      * Reads a block from disk into the provided page.
      * If the block doesn't exist yet, the page is left with zeros.
@@ -36,7 +38,7 @@ public:
      * @param blk the block identifier
      * @param page the page to read into
      */
-    void read(const BlockId& blk, Page& page);
+    virtual void read(const BlockId& blk, Page& page);
 
     /**
      * Writes the contents of a page to disk.
@@ -44,7 +46,7 @@ public:
      * @param blk the block identifier
      * @param page the page to write
      */
-    void write(const BlockId& blk, Page& page);
+    virtual void write(const BlockId& blk, Page& page);
 
     /**
      * Appends a new block to the end of the specified file.
@@ -52,7 +54,7 @@ public:
      * @param filename the name of the file
      * @return the block identifier of the newly appended block
      */
-    BlockId append(const std::string& filename);
+    virtual BlockId append(const std::string& filename);
 
     /**
      * Returns the number of blocks in the specified file.
@@ -60,17 +62,24 @@ public:
      * @param filename the name of the file
      * @return the number of blocks (file size / blocksize)
      */
-    size_t length(const std::string& filename);
+    virtual size_t length(const std::string& filename);
 
     /**
      * Returns true if this database was newly created.
      */
-    bool is_new() const;
+    virtual bool is_new() const;
 
     /**
      * Returns the block size in bytes.
      */
-    size_t block_size() const;
+    virtual size_t block_size() const;
+
+protected:
+    /**
+     * Protected constructor for subclasses (e.g. MemFileMgr)
+     * that don't need disk initialization.
+     */
+    FileMgr(size_t blocksize, bool is_new);
 
 private:
     std::string db_directory_;

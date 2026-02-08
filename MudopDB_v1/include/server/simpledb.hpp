@@ -36,6 +36,12 @@ public:
      */
     SimpleDB(const std::string& dirname);
 
+    /**
+     * Creates a fully initialized in-memory SimpleDB instance.
+     * No disk I/O - all data lives in memory only.
+     */
+    static SimpleDB in_memory();
+
     std::shared_ptr<tx::Transaction> new_tx();
 
     std::shared_ptr<metadata::MetadataMgr> md_mgr() const;
