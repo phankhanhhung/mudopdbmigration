@@ -24,8 +24,8 @@ void HashIndex::before_first(const Constant& searchkey) {
 
 bool HashIndex::next() {
     if (ts_.has_value() && searchkey_.has_value()) {
-        while (ts_->next()) {
-            if (ts_->get_val("dataval") == searchkey_.value()) {
+        while (ts_->next().value()) {
+            if (ts_->get_val("dataval").value() == searchkey_.value()) {
                 return true;
             }
         }
@@ -35,8 +35,8 @@ bool HashIndex::next() {
 
 record::RID HashIndex::get_data_rid() {
     if (ts_.has_value()) {
-        int32_t blknum = ts_->get_int("block");
-        int32_t id = ts_->get_int("id");
+        int32_t blknum = ts_->get_int("block").value();
+        int32_t id = ts_->get_int("id").value();
         return record::RID(blknum, id);
     }
     throw std::runtime_error("HashIndex: no table scan open");
@@ -45,10 +45,10 @@ record::RID HashIndex::get_data_rid() {
 void HashIndex::insert(const Constant& val, const record::RID& rid) {
     before_first(val);
     if (ts_.has_value()) {
-        ts_->insert();
-        ts_->set_int("block", rid.block_number());
-        ts_->set_int("id", rid.slot());
-        ts_->set_val("dataval", val);
+        ts_->insert().value();
+        ts_->set_int("block", rid.block_number()).value();
+        ts_->set_int("id", rid.slot()).value();
+        ts_->set_val("dataval", val).value();
         return;
     }
     throw std::runtime_error("HashIndex: no table scan open");
@@ -59,7 +59,7 @@ void HashIndex::delete_entry(const Constant& val, const record::RID& rid) {
     while (next()) {
         if (get_data_rid() == rid) {
             if (ts_.has_value()) {
-                ts_->delete_record();
+                ts_->delete_record().value();
             }
             return;
         }
@@ -68,7 +68,7 @@ void HashIndex::delete_entry(const Constant& val, const record::RID& rid) {
 
 void HashIndex::close() {
     if (ts_.has_value()) {
-        ts_->close();
+        ts_->close().value();
         ts_.reset();
     }
 }

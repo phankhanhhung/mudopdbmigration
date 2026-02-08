@@ -17,7 +17,7 @@ SortPlan::SortPlan(std::shared_ptr<tx::Transaction> tx,
 std::unique_ptr<Scan> SortPlan::open() {
     auto src = p_->open();
     auto runs = split_into_runs(*src);
-    src->close();
+    src->close().value();
     while (runs.size() > 2) {
         runs = do_a_merge_iteration(runs);
     }
@@ -43,8 +43,8 @@ std::shared_ptr<record::Schema> SortPlan::schema() const {
 
 std::vector<std::shared_ptr<TempTable>> SortPlan::split_into_runs(Scan& src) {
     std::vector<std::shared_ptr<TempTable>> temps;
-    src.before_first();
-    if (!src.next()) {
+    src.before_first().value();
+    if (!src.next().value()) {
         return temps;
     }
     auto currenttemp = std::make_shared<TempTable>(tx_, sch_);
@@ -52,13 +52,13 @@ std::vector<std::shared_ptr<TempTable>> SortPlan::split_into_runs(Scan& src) {
     auto currentscan = currenttemp->open();
     while (copy(src, *currentscan)) {
         if (comp_.compare(src, *currentscan) < 0) {
-            currentscan->close();
+            currentscan->close().value();
             currenttemp = std::make_shared<TempTable>(tx_, sch_);
             temps.push_back(currenttemp);
             currentscan = currenttemp->open();
         }
     }
-    currentscan->close();
+    currentscan->close().value();
     return temps;
 }
 
@@ -83,8 +83,8 @@ std::shared_ptr<TempTable> SortPlan::merge_two_runs(TempTable& p1, TempTable& p2
     auto result = std::make_shared<TempTable>(tx_, sch_);
     auto dest = result->open();
 
-    bool hasmore1 = src1->next();
-    bool hasmore2 = src2->next();
+    bool hasmore1 = src1->next().value();
+    bool hasmore2 = src2->next().value();
     while (hasmore1 && hasmore2) {
         if (comp_.compare(*src1, *src2) < 0) {
             hasmore1 = copy(*src1, *dest);
@@ -98,18 +98,18 @@ std::shared_ptr<TempTable> SortPlan::merge_two_runs(TempTable& p1, TempTable& p2
     while (hasmore2) {
         hasmore2 = copy(*src2, *dest);
     }
-    src1->close();
-    src2->close();
-    dest->close();
+    src1->close().value();
+    src2->close().value();
+    dest->close().value();
     return result;
 }
 
 bool SortPlan::copy(Scan& src, record::TableScan& dest) {
-    dest.insert();
+    dest.insert().value();
     for (const auto& fldname : sch_->fields()) {
-        dest.set_val(fldname, src.get_val(fldname));
+        dest.set_val(fldname, src.get_val(fldname).value()).value();
     }
-    return src.next();
+    return src.next().value();
 }
 
 } // namespace materialize

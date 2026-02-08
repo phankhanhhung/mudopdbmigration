@@ -18,9 +18,9 @@ std::optional<Constant> CountFn::value() const {
 // MaxFn
 MaxFn::MaxFn(const std::string& fldname) : fldname_(fldname) {}
 
-void MaxFn::process_first(Scan& s) { val_ = s.get_val(fldname_); }
+void MaxFn::process_first(Scan& s) { val_ = s.get_val(fldname_).value(); }
 void MaxFn::process_next(Scan& s) {
-    Constant newval = s.get_val(fldname_);
+    Constant newval = s.get_val(fldname_).value();
     if (val_.has_value() && newval > val_.value()) {
         val_ = newval;
     }
@@ -31,7 +31,7 @@ std::optional<Constant> MaxFn::value() const { return val_; }
 // GroupValue
 GroupValue::GroupValue(Scan& s, const std::vector<std::string>& fields) {
     for (const auto& fldname : fields) {
-        vals_.emplace(fldname, s.get_val(fldname));
+        vals_.emplace(fldname, s.get_val(fldname).value());
     }
 }
 

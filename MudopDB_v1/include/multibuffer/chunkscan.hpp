@@ -27,13 +27,13 @@ public:
               size_t startbnum,
               size_t endbnum);
 
-    void before_first() override;
-    bool next() override;
-    int32_t get_int(const std::string& fldname) override;
-    std::string get_string(const std::string& fldname) override;
-    Constant get_val(const std::string& fldname) override;
+    DbResult<void> before_first() override;
+    DbResult<bool> next() override;
+    DbResult<int> get_int(const std::string& fldname) override;
+    DbResult<std::string> get_string(const std::string& fldname) override;
+    DbResult<Constant> get_val(const std::string& fldname) override;
     bool has_field(const std::string& fldname) const override;
-    void close() override;
+    DbResult<void> close() override;
 
 private:
     void move_to_block(size_t blknum);

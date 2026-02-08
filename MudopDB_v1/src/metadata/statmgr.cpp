@@ -32,13 +32,13 @@ void StatMgr::refresh_statistics(std::shared_ptr<tx::Transaction> tx) {
     numcalls_ = 0;
     record::Layout tcatlayout = tbl_mgr_->get_layout("tblcat", tx);
     record::TableScan tcat(tx, "tblcat", tcatlayout);
-    while (tcat.next()) {
-        std::string tblname = tcat.get_string("tblname");
+    while (tcat.next().value()) {
+        std::string tblname = tcat.get_string("tblname").value();
         record::Layout layout = tbl_mgr_->get_layout(tblname, tx);
         StatInfo si = calc_table_stats(tblname, layout, tx);
         tablestats_.emplace(tblname, si);
     }
-    tcat.close();
+    tcat.close().value();
 }
 
 StatInfo StatMgr::calc_table_stats(const std::string& tblname,
@@ -47,14 +47,14 @@ StatInfo StatMgr::calc_table_stats(const std::string& tblname,
     size_t num_recs = 0;
     size_t numblocks = 0;
     record::TableScan ts(tx, tblname, layout);
-    while (ts.next()) {
+    while (ts.next().value()) {
         num_recs++;
         auto rid = ts.get_rid();
         if (rid.has_value()) {
             numblocks = static_cast<size_t>(rid.value().block_number()) + 1;
         }
     }
-    ts.close();
+    ts.close().value();
     return StatInfo(numblocks, num_recs);
 }
 

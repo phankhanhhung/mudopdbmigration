@@ -25,11 +25,11 @@ size_t BasicUpdatePlanner::execute_delete(
     auto us = dynamic_cast<UpdateScan*>(s.get());
     if (!us) throw std::runtime_error("Expected UpdateScan for delete");
     size_t count = 0;
-    while (us->next()) {
-        us->delete_record();
+    while (us->next().value()) {
+        us->delete_record().value();
         count++;
     }
-    us->close();
+    us->close().value();
     return count;
 }
 
@@ -43,12 +43,12 @@ size_t BasicUpdatePlanner::execute_modify(
     auto us = dynamic_cast<UpdateScan*>(s.get());
     if (!us) throw std::runtime_error("Expected UpdateScan for modify");
     size_t count = 0;
-    while (us->next()) {
+    while (us->next().value()) {
         Constant val = data.new_value().evaluate(*us);
-        us->set_val(data.target_field(), val);
+        us->set_val(data.target_field(), val).value();
         count++;
     }
-    us->close();
+    us->close().value();
     return count;
 }
 
@@ -60,17 +60,17 @@ size_t BasicUpdatePlanner::execute_insert(
     auto s = p->open();
     auto us = dynamic_cast<UpdateScan*>(s.get());
     if (!us) throw std::runtime_error("Expected UpdateScan for insert");
-    us->insert();
+    us->insert().value();
     auto vals = data.vals();
     auto flds = data.fields();
     auto it = vals.begin();
     for (const auto& fldname : flds) {
         if (it != vals.end()) {
-            us->set_val(fldname, *it);
+            us->set_val(fldname, *it).value();
             ++it;
         }
     }
-    us->close();
+    us->close().value();
     return 1;
 }
 

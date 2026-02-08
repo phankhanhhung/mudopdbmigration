@@ -18,14 +18,14 @@ std::unique_ptr<Scan> MaterializePlan::open() {
     TempTable temp(tx_, sch);
     auto src = srcplan_->open();
     auto dest = temp.open();
-    while (src->next()) {
-        dest->insert();
+    while (src->next().value()) {
+        dest->insert().value();
         for (const auto& fldname : sch->fields()) {
-            dest->set_val(fldname, src->get_val(fldname));
+            dest->set_val(fldname, src->get_val(fldname).value()).value();
         }
     }
-    src->close();
-    dest->before_first();
+    src->close().value();
+    dest->before_first().value();
     return dest;
 }
 

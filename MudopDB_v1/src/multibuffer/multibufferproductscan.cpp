@@ -19,51 +19,54 @@ MultibufferProductScan::MultibufferProductScan(std::shared_ptr<tx::Transaction> 
     before_first();
 }
 
-void MultibufferProductScan::before_first() {
-    nextblknum_ = 0;
-    use_next_chunk();
-}
-
-bool MultibufferProductScan::next() {
-    // Nested loop: for each RHS chunk, scan all LHS rows paired with all chunk rows
-    while (rhsscan_) {
-        // Try advancing RHS within current LHS row
-        if (rhsscan_->next()) {
-            return true;
-        }
-        // RHS exhausted, advance LHS
-        if (!lhsscan_->next()) {
-            // LHS exhausted for this chunk, move to next chunk
-            if (!use_next_chunk()) {
-                return false;
-            }
-            // use_next_chunk resets LHS
-            if (!lhsscan_->next()) {
-                return false;
-            }
-        }
-        // Reset RHS for new LHS row
-        rhsscan_->before_first();
+DbResult<void> MultibufferProductScan::before_first() {
+    try {
+        nextblknum_ = 0;
+        use_next_chunk();
+        return DbResult<void>::ok();
+    } catch (const std::exception& e) {
+        return DbResult<void>::err(e.what());
     }
-    return false;
 }
 
-int32_t MultibufferProductScan::get_int(const std::string& fldname) {
+DbResult<bool> MultibufferProductScan::next() {
+    try {
+        while (rhsscan_) {
+            if (rhsscan_->next().value()) {
+                return DbResult<bool>::ok(true);
+            }
+            if (!lhsscan_->next().value()) {
+                if (!use_next_chunk()) {
+                    return DbResult<bool>::ok(false);
+                }
+                if (!lhsscan_->next().value()) {
+                    return DbResult<bool>::ok(false);
+                }
+            }
+            rhsscan_->before_first().value();
+        }
+        return DbResult<bool>::ok(false);
+    } catch (const std::exception& e) {
+        return DbResult<bool>::err(e.what());
+    }
+}
+
+DbResult<int> MultibufferProductScan::get_int(const std::string& fldname) {
     if (lhsscan_ && lhsscan_->has_field(fldname)) return lhsscan_->get_int(fldname);
     if (rhsscan_) return rhsscan_->get_int(fldname);
-    throw std::runtime_error("MultibufferProductScan: field not found");
+    return DbResult<int>::err("MultibufferProductScan: field not found");
 }
 
-std::string MultibufferProductScan::get_string(const std::string& fldname) {
+DbResult<std::string> MultibufferProductScan::get_string(const std::string& fldname) {
     if (lhsscan_ && lhsscan_->has_field(fldname)) return lhsscan_->get_string(fldname);
     if (rhsscan_) return rhsscan_->get_string(fldname);
-    throw std::runtime_error("MultibufferProductScan: field not found");
+    return DbResult<std::string>::err("MultibufferProductScan: field not found");
 }
 
-Constant MultibufferProductScan::get_val(const std::string& fldname) {
+DbResult<Constant> MultibufferProductScan::get_val(const std::string& fldname) {
     if (lhsscan_ && lhsscan_->has_field(fldname)) return lhsscan_->get_val(fldname);
     if (rhsscan_) return rhsscan_->get_val(fldname);
-    throw std::runtime_error("MultibufferProductScan: field not found");
+    return DbResult<Constant>::err("MultibufferProductScan: field not found");
 }
 
 bool MultibufferProductScan::has_field(const std::string& fldname) const {
@@ -71,9 +74,14 @@ bool MultibufferProductScan::has_field(const std::string& fldname) const {
            (rhsscan_ && rhsscan_->has_field(fldname));
 }
 
-void MultibufferProductScan::close() {
-    if (lhsscan_) lhsscan_->close();
-    if (rhsscan_) rhsscan_->close();
+DbResult<void> MultibufferProductScan::close() {
+    try {
+        if (lhsscan_) lhsscan_->close().value();
+        if (rhsscan_) rhsscan_->close().value();
+        return DbResult<void>::ok();
+    } catch (const std::exception& e) {
+        return DbResult<void>::err(e.what());
+    }
 }
 
 bool MultibufferProductScan::use_next_chunk() {
@@ -81,14 +89,14 @@ bool MultibufferProductScan::use_next_chunk() {
         return false;
     }
     if (rhsscan_) {
-        rhsscan_->close();
+        rhsscan_->close().value();
     }
     size_t end = nextblknum_ + chunksize_ - 1;
     if (end >= filesize_) {
         end = filesize_ - 1;
     }
     rhsscan_ = std::make_unique<ChunkScan>(tx_, filename_, layout_, nextblknum_, end);
-    lhsscan_->before_first();
+    lhsscan_->before_first().value();
     nextblknum_ = end + 1;
     return true;
 }

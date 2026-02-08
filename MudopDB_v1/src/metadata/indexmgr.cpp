@@ -26,11 +26,11 @@ void IndexMgr::create_index(const std::string& idxname,
                              const std::string& fldname,
                              std::shared_ptr<tx::Transaction> tx) {
     record::TableScan ts(tx, "idxcat", layout_);
-    ts.insert();
-    ts.set_string("indexname", idxname);
-    ts.set_string("tablename", tblname);
-    ts.set_string("fieldname", fldname);
-    ts.close();
+    ts.insert().value();
+    ts.set_string("indexname", idxname).value();
+    ts.set_string("tablename", tblname).value();
+    ts.set_string("fieldname", fldname).value();
+    ts.close().value();
 }
 
 std::unordered_map<std::string, IndexInfo> IndexMgr::get_index_info(
@@ -38,17 +38,17 @@ std::unordered_map<std::string, IndexInfo> IndexMgr::get_index_info(
     std::shared_ptr<tx::Transaction> tx) {
     std::unordered_map<std::string, IndexInfo> result;
     record::TableScan ts(tx, "idxcat", layout_);
-    while (ts.next()) {
-        if (ts.get_string("tablename") == tblname) {
-            std::string idxname = ts.get_string("indexname");
-            std::string fldname = ts.get_string("fieldname");
+    while (ts.next().value()) {
+        if (ts.get_string("tablename").value() == tblname) {
+            std::string idxname = ts.get_string("indexname").value();
+            std::string fldname = ts.get_string("fieldname").value();
             auto tbl_layout = tblmgr_->get_layout(tblname, tx);
             auto tblsi = statmgr_->get_stat_info(tblname, tbl_layout, tx);
             IndexInfo ii(idxname, fldname, tbl_layout.schema(), tx, tblsi);
             result.emplace(fldname, ii);
         }
     }
-    ts.close();
+    ts.close().value();
     return result;
 }
 

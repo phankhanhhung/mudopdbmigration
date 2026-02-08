@@ -13,13 +13,13 @@ class ProductScan : public Scan {
 public:
     ProductScan(std::unique_ptr<Scan> s1, std::unique_ptr<Scan> s2);
 
-    void before_first() override;
-    bool next() override;
-    int get_int(const std::string& fldname) override;
-    std::string get_string(const std::string& fldname) override;
-    Constant get_val(const std::string& fldname) override;
+    DbResult<void> before_first() override;
+    DbResult<bool> next() override;
+    DbResult<int> get_int(const std::string& fldname) override;
+    DbResult<std::string> get_string(const std::string& fldname) override;
+    DbResult<Constant> get_val(const std::string& fldname) override;
     bool has_field(const std::string& fldname) const override;
-    void close() override;
+    DbResult<void> close() override;
 
 private:
     std::unique_ptr<Scan> s1_;

@@ -21,24 +21,24 @@ void ViewMgr::create_view(const std::string& vname,
                            std::shared_ptr<tx::Transaction> tx) {
     record::Layout layout = tbl_mgr_->get_layout("viewcat", tx);
     record::TableScan ts(tx, "viewcat", layout);
-    ts.insert();
-    ts.set_string("viewname", vname);
-    ts.set_string("viewdef", vdef);
-    ts.close();
+    ts.insert().value();
+    ts.set_string("viewname", vname).value();
+    ts.set_string("viewdef", vdef).value();
+    ts.close().value();
 }
 
 std::optional<std::string> ViewMgr::get_view_def(const std::string& vname,
                                                    std::shared_ptr<tx::Transaction> tx) {
     record::Layout layout = tbl_mgr_->get_layout("viewcat", tx);
     record::TableScan ts(tx, "viewcat", layout);
-    while (ts.next()) {
-        if (ts.get_string("viewname") == vname) {
-            std::string result = ts.get_string("viewdef");
-            ts.close();
+    while (ts.next().value()) {
+        if (ts.get_string("viewname").value() == vname) {
+            std::string result = ts.get_string("viewdef").value();
+            ts.close().value();
             return result;
         }
     }
-    ts.close();
+    ts.close().value();
     return std::nullopt;
 }
 

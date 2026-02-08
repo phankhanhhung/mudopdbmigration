@@ -26,14 +26,14 @@ size_t IndexUpdatePlanner::execute_insert(const parse::InsertData& data,
     auto* us = dynamic_cast<UpdateScan*>(s.get());
     if (!us) return 0;
 
-    us->insert();
+    us->insert().value();
     auto rid = us->get_rid().value();
 
     auto indexes = mdm_->get_index_info(tblname, tx);
     auto fields = data.fields();
     auto vals = data.vals();
     for (size_t i = 0; i < fields.size(); i++) {
-        us->set_val(fields[i], vals[i]);
+        us->set_val(fields[i], vals[i]).value();
 
         auto it = indexes.find(fields[i]);
         if (it != indexes.end()) {
@@ -42,7 +42,7 @@ size_t IndexUpdatePlanner::execute_insert(const parse::InsertData& data,
             idx->close();
         }
     }
-    us->close();
+    us->close().value();
     return 1;
 }
 
@@ -59,18 +59,18 @@ size_t IndexUpdatePlanner::execute_delete(const parse::DeleteData& data,
     if (!us) return 0;
 
     size_t count = 0;
-    while (us->next()) {
+    while (us->next().value()) {
         auto rid = us->get_rid().value();
         for (auto& [fldname, ii] : indexes) {
-            Constant val = us->get_val(fldname);
+            Constant val = us->get_val(fldname).value();
             auto idx = ii.open();
             idx->delete_entry(val, rid);
             idx->close();
         }
-        us->delete_record();
+        us->delete_record().value();
         count++;
     }
-    us->close();
+    us->close().value();
     return count;
 }
 
@@ -93,10 +93,10 @@ size_t IndexUpdatePlanner::execute_modify(const parse::ModifyData& data,
     if (!us) return 0;
 
     size_t count = 0;
-    while (us->next()) {
+    while (us->next().value()) {
         Constant newval = data.new_value().evaluate(*us);
-        Constant oldval = us->get_val(fldname);
-        us->set_val(fldname, newval);
+        Constant oldval = us->get_val(fldname).value();
+        us->set_val(fldname, newval).value();
 
         if (idx) {
             auto rid = us->get_rid().value();
@@ -106,7 +106,7 @@ size_t IndexUpdatePlanner::execute_modify(const parse::ModifyData& data,
         count++;
     }
     if (idx) idx->close();
-    us->close();
+    us->close().value();
     return count;
 }
 

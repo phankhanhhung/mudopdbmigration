@@ -27,56 +27,82 @@ void ChunkScan::move_to_block(size_t blknum) {
     currentslot_.reset();
 }
 
-void ChunkScan::before_first() {
-    move_to_block(startbnum_);
+DbResult<void> ChunkScan::before_first() {
+    try {
+        move_to_block(startbnum_);
+        return DbResult<void>::ok();
+    } catch (const std::exception& e) {
+        return DbResult<void>::err(e.what());
+    }
 }
 
-bool ChunkScan::next() {
-    if (rpidx_ < buffs_.size()) {
-        currentslot_ = buffs_[rpidx_].next_after(currentslot_);
-    }
-    while (!currentslot_.has_value()) {
-        if (currentbnum_ == endbnum_) {
-            return false;
-        }
-        size_t blknum = buffs_[rpidx_].block().number() + 1;
-        move_to_block(blknum);
+DbResult<bool> ChunkScan::next() {
+    try {
         if (rpidx_ < buffs_.size()) {
             currentslot_ = buffs_[rpidx_].next_after(currentslot_);
         }
+        while (!currentslot_.has_value()) {
+            if (currentbnum_ == endbnum_) {
+                return DbResult<bool>::ok(false);
+            }
+            size_t blknum = buffs_[rpidx_].block().number() + 1;
+            move_to_block(blknum);
+            if (rpidx_ < buffs_.size()) {
+                currentslot_ = buffs_[rpidx_].next_after(currentslot_);
+            }
+        }
+        return DbResult<bool>::ok(true);
+    } catch (const std::exception& e) {
+        return DbResult<bool>::err(e.what());
     }
-    return true;
 }
 
-int32_t ChunkScan::get_int(const std::string& fldname) {
-    if (rpidx_ < buffs_.size() && currentslot_.has_value()) {
-        return buffs_[rpidx_].get_int(currentslot_.value(), fldname);
+DbResult<int> ChunkScan::get_int(const std::string& fldname) {
+    try {
+        if (rpidx_ < buffs_.size() && currentslot_.has_value()) {
+            return DbResult<int>::ok(buffs_[rpidx_].get_int(currentslot_.value(), fldname));
+        }
+        return DbResult<int>::err("ChunkScan: no current record");
+    } catch (const std::exception& e) {
+        return DbResult<int>::err(e.what());
     }
-    throw std::runtime_error("ChunkScan: no current record");
 }
 
-std::string ChunkScan::get_string(const std::string& fldname) {
-    if (rpidx_ < buffs_.size() && currentslot_.has_value()) {
-        return buffs_[rpidx_].get_string(currentslot_.value(), fldname);
+DbResult<std::string> ChunkScan::get_string(const std::string& fldname) {
+    try {
+        if (rpidx_ < buffs_.size() && currentslot_.has_value()) {
+            return DbResult<std::string>::ok(buffs_[rpidx_].get_string(currentslot_.value(), fldname));
+        }
+        return DbResult<std::string>::err("ChunkScan: no current record");
+    } catch (const std::exception& e) {
+        return DbResult<std::string>::err(e.what());
     }
-    throw std::runtime_error("ChunkScan: no current record");
 }
 
-Constant ChunkScan::get_val(const std::string& fldname) {
-    if (layout_.schema()->type(fldname) == record::Type::INTEGER) {
-        return Constant::with_int(get_int(fldname));
+DbResult<Constant> ChunkScan::get_val(const std::string& fldname) {
+    try {
+        if (layout_.schema()->type(fldname) == record::Type::INTEGER) {
+            return DbResult<Constant>::ok(Constant::with_int(get_int(fldname).value()));
+        }
+        return DbResult<Constant>::ok(Constant::with_string(get_string(fldname).value()));
+    } catch (const std::exception& e) {
+        return DbResult<Constant>::err(e.what());
     }
-    return Constant::with_string(get_string(fldname));
 }
 
 bool ChunkScan::has_field(const std::string& fldname) const {
     return layout_.schema()->has_field(fldname);
 }
 
-void ChunkScan::close() {
-    for (size_t i = 0; i < buffs_.size(); i++) {
-        file::BlockId blk(filename_, static_cast<int32_t>(startbnum_ + i));
-        tx_->unpin(blk);
+DbResult<void> ChunkScan::close() {
+    try {
+        for (size_t i = 0; i < buffs_.size(); i++) {
+            file::BlockId blk(filename_, static_cast<int32_t>(startbnum_ + i));
+            tx_->unpin(blk);
+        }
+        return DbResult<void>::ok();
+    } catch (const std::exception& e) {
+        return DbResult<void>::err(e.what());
     }
 }
 

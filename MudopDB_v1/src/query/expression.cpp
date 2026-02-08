@@ -20,7 +20,7 @@ Constant Expression::evaluate(Scan& s) const {
         return val_.value();
     }
     if (fldname_.has_value()) {
-        return s.get_val(fldname_.value());
+        return s.get_val(fldname_.value()).value();
     }
     throw std::runtime_error("Expression: no value or field name");
 }

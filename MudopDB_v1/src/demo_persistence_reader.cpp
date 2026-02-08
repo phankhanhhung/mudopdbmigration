@@ -37,14 +37,14 @@ int main() {
     auto tx = std::make_shared<tx::Transaction>(fm, lm, bm);
     TableScan scan(tx, "accounts", layout);
 
-    scan.before_first();
+    scan.before_first().value();
     int count = 0;
     int total_balance = 0;
 
-    while (scan.next()) {
-        int id = scan.get_int("id");
-        std::string name = scan.get_string("name");
-        int balance = scan.get_int("balance");
+    while (scan.next().value()) {
+        int id = scan.get_int("id").value();
+        std::string name = scan.get_string("name").value();
+        int balance = scan.get_int("balance").value();
         std::cout << std::setw(10) << id
                   << std::setw(25) << name
                   << std::setw(15) << balance << "\n";
@@ -54,7 +54,7 @@ int main() {
 
     std::cout << "Total: " << count << " records, $" << total_balance << "\n";
 
-    scan.close();
+    scan.close().value();
     tx->commit();
 
     return (count == 5 && total_balance == 44450) ? 0 : 1;

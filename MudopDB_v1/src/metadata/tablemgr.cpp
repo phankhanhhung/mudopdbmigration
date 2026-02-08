@@ -37,22 +37,22 @@ void TableMgr::create_table(const std::string& tblname,
 
     // Insert into tblcat
     record::TableScan tcat(tx, "tblcat", tcat_layout_);
-    tcat.insert();
-    tcat.set_string("tblname", tblname);
-    tcat.set_int("slotsize", static_cast<int32_t>(layout.slot_size()));
-    tcat.close();
+    tcat.insert().value();
+    tcat.set_string("tblname", tblname).value();
+    tcat.set_int("slotsize", static_cast<int32_t>(layout.slot_size())).value();
+    tcat.close().value();
 
     // Insert fields into fldcat
     record::TableScan fcat(tx, "fldcat", fcat_layout_);
     for (const auto& fldname : sch->fields()) {
-        fcat.insert();
-        fcat.set_string("tblname", tblname);
-        fcat.set_string("fldname", fldname);
-        fcat.set_int("type", static_cast<int32_t>(sch->type(fldname)));
-        fcat.set_int("length", static_cast<int32_t>(sch->length(fldname)));
-        fcat.set_int("offset", static_cast<int32_t>(layout.offset(fldname)));
+        fcat.insert().value();
+        fcat.set_string("tblname", tblname).value();
+        fcat.set_string("fldname", fldname).value();
+        fcat.set_int("type", static_cast<int32_t>(sch->type(fldname))).value();
+        fcat.set_int("length", static_cast<int32_t>(sch->length(fldname))).value();
+        fcat.set_int("offset", static_cast<int32_t>(layout.offset(fldname))).value();
     }
-    fcat.close();
+    fcat.close().value();
 }
 
 record::Layout TableMgr::get_layout(const std::string& tblname,
@@ -61,25 +61,25 @@ record::Layout TableMgr::get_layout(const std::string& tblname,
 
     // Read slot size from tblcat
     record::TableScan tcat(tx, "tblcat", tcat_layout_);
-    while (tcat.next()) {
-        if (tcat.get_string("tblname") == tblname) {
-            size = static_cast<size_t>(tcat.get_int("slotsize"));
+    while (tcat.next().value()) {
+        if (tcat.get_string("tblname").value() == tblname) {
+            size = static_cast<size_t>(tcat.get_int("slotsize").value());
             break;
         }
     }
-    tcat.close();
+    tcat.close().value();
 
     // Read field info from fldcat
     auto sch = std::make_shared<record::Schema>();
     std::unordered_map<std::string, size_t> offsets;
 
     record::TableScan fcat(tx, "fldcat", fcat_layout_);
-    while (fcat.next()) {
-        if (fcat.get_string("tblname") == tblname) {
-            std::string fldname = fcat.get_string("fldname");
-            int32_t fldtype = fcat.get_int("type");
-            int32_t fldlen = fcat.get_int("length");
-            int32_t fldoffset = fcat.get_int("offset");
+    while (fcat.next().value()) {
+        if (fcat.get_string("tblname").value() == tblname) {
+            std::string fldname = fcat.get_string("fldname").value();
+            int32_t fldtype = fcat.get_int("type").value();
+            int32_t fldlen = fcat.get_int("length").value();
+            int32_t fldoffset = fcat.get_int("offset").value();
             offsets[fldname] = static_cast<size_t>(fldoffset);
 
             record::Type t;
@@ -93,7 +93,7 @@ record::Layout TableMgr::get_layout(const std::string& tblname,
             sch->add_field(fldname, t, static_cast<size_t>(fldlen));
         }
     }
-    fcat.close();
+    fcat.close().value();
 
     if (size.has_value()) {
         return record::Layout(sch, offsets, size.value());

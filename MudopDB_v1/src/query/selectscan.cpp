@@ -4,28 +4,32 @@
 SelectScan::SelectScan(std::unique_ptr<Scan> s, const Predicate& pred)
     : s_(std::move(s)), pred_(pred) {}
 
-void SelectScan::before_first() {
-    s_->before_first();
+DbResult<void> SelectScan::before_first() {
+    return s_->before_first();
 }
 
-bool SelectScan::next() {
-    while (s_->next()) {
-        if (pred_.is_satisfied(*s_)) {
-            return true;
+DbResult<bool> SelectScan::next() {
+    try {
+        while (s_->next().value()) {
+            if (pred_.is_satisfied(*s_)) {
+                return DbResult<bool>::ok(true);
+            }
         }
+        return DbResult<bool>::ok(false);
+    } catch (const std::exception& e) {
+        return DbResult<bool>::err(e.what());
     }
-    return false;
 }
 
-int SelectScan::get_int(const std::string& fldname) {
+DbResult<int> SelectScan::get_int(const std::string& fldname) {
     return s_->get_int(fldname);
 }
 
-std::string SelectScan::get_string(const std::string& fldname) {
+DbResult<std::string> SelectScan::get_string(const std::string& fldname) {
     return s_->get_string(fldname);
 }
 
-Constant SelectScan::get_val(const std::string& fldname) {
+DbResult<Constant> SelectScan::get_val(const std::string& fldname) {
     return s_->get_val(fldname);
 }
 
@@ -33,37 +37,42 @@ bool SelectScan::has_field(const std::string& fldname) const {
     return s_->has_field(fldname);
 }
 
-void SelectScan::close() {
-    s_->close();
+DbResult<void> SelectScan::close() {
+    return s_->close();
 }
 
 UpdateScan* SelectScan::get_update_scan() const {
     return dynamic_cast<UpdateScan*>(s_.get());
 }
 
-void SelectScan::set_val(const std::string& fldname, const Constant& val) {
+DbResult<void> SelectScan::set_val(const std::string& fldname, const Constant& val) {
     auto us = get_update_scan();
-    if (us) us->set_val(fldname, val);
+    if (us) return us->set_val(fldname, val);
+    return DbResult<void>::ok();
 }
 
-void SelectScan::set_int(const std::string& fldname, int32_t val) {
+DbResult<void> SelectScan::set_int(const std::string& fldname, int32_t val) {
     auto us = get_update_scan();
-    if (us) us->set_int(fldname, val);
+    if (us) return us->set_int(fldname, val);
+    return DbResult<void>::ok();
 }
 
-void SelectScan::set_string(const std::string& fldname, const std::string& val) {
+DbResult<void> SelectScan::set_string(const std::string& fldname, const std::string& val) {
     auto us = get_update_scan();
-    if (us) us->set_string(fldname, val);
+    if (us) return us->set_string(fldname, val);
+    return DbResult<void>::ok();
 }
 
-void SelectScan::insert() {
+DbResult<void> SelectScan::insert() {
     auto us = get_update_scan();
-    if (us) us->insert();
+    if (us) return us->insert();
+    return DbResult<void>::ok();
 }
 
-void SelectScan::delete_record() {
+DbResult<void> SelectScan::delete_record() {
     auto us = get_update_scan();
-    if (us) us->delete_record();
+    if (us) return us->delete_record();
+    return DbResult<void>::ok();
 }
 
 std::optional<record::RID> SelectScan::get_rid() const {
@@ -72,7 +81,8 @@ std::optional<record::RID> SelectScan::get_rid() const {
     return std::nullopt;
 }
 
-void SelectScan::move_to_rid(const record::RID& rid) {
+DbResult<void> SelectScan::move_to_rid(const record::RID& rid) {
     auto us = get_update_scan();
-    if (us) us->move_to_rid(rid);
+    if (us) return us->move_to_rid(rid);
+    return DbResult<void>::ok();
 }

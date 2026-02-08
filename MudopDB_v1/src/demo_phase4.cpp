@@ -27,9 +27,9 @@ void print_header(const Schema& schema) {
 void print_record(TableScan& scan, const Schema& schema) {
     for (const auto& field : schema.fields()) {
         if (schema.type(field) == Type::INTEGER) {
-            std::cout << std::setw(15) << scan.get_int(field);
+            std::cout << std::setw(15) << scan.get_int(field).value();
         } else {
-            std::cout << std::setw(15) << scan.get_string(field);
+            std::cout << std::setw(15) << scan.get_string(field).value();
         }
     }
     std::cout << "\n";
@@ -80,24 +80,24 @@ int main() {
     };
 
     for (const auto& student : students) {
-        scan.insert();
-        scan.set_int("id", student.id);
-        scan.set_string("name", student.name);
-        scan.set_int("age", student.age);
-        scan.set_string("major", student.major);
+        scan.insert().value();
+        scan.set_int("id", student.id).value();
+        scan.set_string("name", student.name).value();
+        scan.set_int("age", student.age).value();
+        scan.set_string("major", student.major).value();
     }
 
     // Display all records
     print_header(*schema);
-    scan.before_first();
+    scan.before_first().value();
     int count = 0;
-    while (scan.next()) {
+    while (scan.next().value()) {
         print_record(scan, *schema);
         count++;
     }
     std::cout << "Total records: " << count << "\n";
 
-    scan.close();
+    scan.close().value();
     tx->commit();
 
     // Cleanup

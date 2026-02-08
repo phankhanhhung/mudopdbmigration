@@ -50,14 +50,14 @@ int main() {
     };
 
     for (const auto& acc : accounts) {
-        scan.insert();
-        scan.set_int("id", acc.id);
-        scan.set_string("name", acc.name);
-        scan.set_int("balance", acc.balance);
+        scan.insert().value();
+        scan.set_int("id", acc.id).value();
+        scan.set_string("name", acc.name).value();
+        scan.set_int("balance", acc.balance).value();
         std::cout << "Inserted: Account " << acc.id << " - " << acc.name << "\n";
     }
 
-    scan.close();
+    scan.close().value();
     tx->commit();
 
     std::cout << "Writer done. Data persisted.\n";

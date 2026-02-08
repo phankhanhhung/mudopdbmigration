@@ -24,14 +24,14 @@ static void copy_records_from(std::shared_ptr<tx::Transaction> tx,
                                materialize::TempTable& tt) {
     auto src = p->open();
     auto dest = tt.open();
-    while (src->next()) {
-        dest->insert();
+    while (src->next().value()) {
+        dest->insert().value();
         for (const auto& fldname : p->schema()->fields()) {
-            dest->set_val(fldname, src->get_val(fldname));
+            dest->set_val(fldname, src->get_val(fldname).value()).value();
         }
     }
-    src->close();
-    dest->close();
+    src->close().value();
+    dest->close().value();
 }
 
 std::unique_ptr<Scan> MultibufferProductPlan::open() {

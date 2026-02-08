@@ -16,49 +16,51 @@ public:
     string_data_["name"] = {"Alice", "Bob", "Charlie"};
   }
 
-  void before_first() override {
+  DbResult<void> before_first() override {
     before_first_called_ = true;
     current_position_ = -1;
+    return DbResult<void>::ok();
   }
 
-  bool next() override {
+  DbResult<bool> next() override {
     next_called_ = true;
     current_position_++;
-    return current_position_ < 3;
+    return DbResult<bool>::ok(current_position_ < 3);
   }
 
-  int get_int(const std::string& fldname) override {
+  DbResult<int> get_int(const std::string& fldname) override {
     if (int_data_.count(fldname) && current_position_ >= 0
         && current_position_ < static_cast<int>(int_data_[fldname].size())) {
-      return int_data_[fldname][current_position_];
+      return DbResult<int>::ok(int_data_[fldname][current_position_]);
     }
-    return 0;
+    return DbResult<int>::ok(0);
   }
 
-  std::string get_string(const std::string& fldname) override {
+  DbResult<std::string> get_string(const std::string& fldname) override {
     if (string_data_.count(fldname) && current_position_ >= 0
         && current_position_ < static_cast<int>(string_data_[fldname].size())) {
-      return string_data_[fldname][current_position_];
+      return DbResult<std::string>::ok(string_data_[fldname][current_position_]);
     }
-    return "";
+    return DbResult<std::string>::ok("");
   }
 
-  Constant get_val(const std::string& fldname) override {
+  DbResult<Constant> get_val(const std::string& fldname) override {
     if (int_data_.count(fldname)) {
-      return Constant::with_int(get_int(fldname));
+      return DbResult<Constant>::ok(Constant::with_int(get_int(fldname).value()));
     }
     if (string_data_.count(fldname)) {
-      return Constant::with_string(get_string(fldname));
+      return DbResult<Constant>::ok(Constant::with_string(get_string(fldname).value()));
     }
-    return Constant::with_int(0);
+    return DbResult<Constant>::ok(Constant::with_int(0));
   }
 
   bool has_field(const std::string& fldname) const override {
     return int_data_.count(fldname) > 0 || string_data_.count(fldname) > 0;
   }
 
-  void close() override {
+  DbResult<void> close() override {
     close_called_ = true;
+    return DbResult<void>::ok();
   }
 
   // Test helper methods
@@ -86,16 +88,16 @@ TEST(Scan, PolymorphicUsage) {
 
 TEST(Scan, BeforeFirst) {
   auto mock_scan = std::make_unique<MockScan>();
-  mock_scan->before_first();
+  mock_scan->before_first().value();
   EXPECT_TRUE(mock_scan->was_before_first_called());
 }
 
 TEST(Scan, NextIteration) {
   auto mock_scan = std::make_unique<MockScan>();
-  mock_scan->before_first();
+  mock_scan->before_first().value();
 
   int count = 0;
-  while (mock_scan->next()) {
+  while (mock_scan->next().value()) {
     count++;
   }
   EXPECT_EQ(count, 3);
@@ -104,42 +106,42 @@ TEST(Scan, NextIteration) {
 
 TEST(Scan, GetInt) {
   auto mock_scan = std::make_unique<MockScan>();
-  mock_scan->before_first();
+  mock_scan->before_first().value();
 
-  EXPECT_TRUE(mock_scan->next());
-  EXPECT_EQ(mock_scan->get_int("id"), 1);
+  EXPECT_TRUE(mock_scan->next().value());
+  EXPECT_EQ(mock_scan->get_int("id").value(), 1);
 
-  EXPECT_TRUE(mock_scan->next());
-  EXPECT_EQ(mock_scan->get_int("id"), 2);
+  EXPECT_TRUE(mock_scan->next().value());
+  EXPECT_EQ(mock_scan->get_int("id").value(), 2);
 
-  EXPECT_TRUE(mock_scan->next());
-  EXPECT_EQ(mock_scan->get_int("id"), 3);
+  EXPECT_TRUE(mock_scan->next().value());
+  EXPECT_EQ(mock_scan->get_int("id").value(), 3);
 }
 
 TEST(Scan, GetString) {
   auto mock_scan = std::make_unique<MockScan>();
-  mock_scan->before_first();
+  mock_scan->before_first().value();
 
-  EXPECT_TRUE(mock_scan->next());
-  EXPECT_EQ(mock_scan->get_string("name"), "Alice");
+  EXPECT_TRUE(mock_scan->next().value());
+  EXPECT_EQ(mock_scan->get_string("name").value(), "Alice");
 
-  EXPECT_TRUE(mock_scan->next());
-  EXPECT_EQ(mock_scan->get_string("name"), "Bob");
+  EXPECT_TRUE(mock_scan->next().value());
+  EXPECT_EQ(mock_scan->get_string("name").value(), "Bob");
 
-  EXPECT_TRUE(mock_scan->next());
-  EXPECT_EQ(mock_scan->get_string("name"), "Charlie");
+  EXPECT_TRUE(mock_scan->next().value());
+  EXPECT_EQ(mock_scan->get_string("name").value(), "Charlie");
 }
 
 TEST(Scan, GetVal) {
   auto mock_scan = std::make_unique<MockScan>();
-  mock_scan->before_first();
+  mock_scan->before_first().value();
 
-  EXPECT_TRUE(mock_scan->next());
-  auto val_int = mock_scan->get_val("id");
+  EXPECT_TRUE(mock_scan->next().value());
+  auto val_int = mock_scan->get_val("id").value();
   EXPECT_TRUE(val_int.as_int().has_value());
   EXPECT_EQ(val_int.as_int().value(), 1);
 
-  auto val_str = mock_scan->get_val("name");
+  auto val_str = mock_scan->get_val("name").value();
   EXPECT_TRUE(val_str.as_string().has_value());
   EXPECT_EQ(val_str.as_string().value(), "Alice");
 }
@@ -154,7 +156,7 @@ TEST(Scan, HasField) {
 
 TEST(Scan, Close) {
   auto mock_scan = std::make_unique<MockScan>();
-  mock_scan->close();
+  mock_scan->close().value();
   EXPECT_TRUE(mock_scan->was_close_called());
 }
 
@@ -162,14 +164,14 @@ TEST(Scan, FullScanLifecycle) {
   std::unique_ptr<Scan> scan = std::make_unique<MockScan>();
 
   // Initialize scan
-  scan->before_first();
+  scan->before_first().value();
 
   // Iterate through all records
   int record_count = 0;
-  while (scan->next()) {
+  while (scan->next().value()) {
     // Verify we can read fields
-    int id = scan->get_int("id");
-    std::string name = scan->get_string("name");
+    int id = scan->get_int("id").value();
+    std::string name = scan->get_string("name").value();
 
     EXPECT_GT(id, 0);
     EXPECT_FALSE(name.empty());
@@ -179,7 +181,7 @@ TEST(Scan, FullScanLifecycle) {
   EXPECT_EQ(record_count, 3);
 
   // Close scan
-  scan->close();
+  scan->close().value();
 }
 
 TEST(Scan, SharedPtrUsage) {
@@ -187,6 +189,6 @@ TEST(Scan, SharedPtrUsage) {
   std::shared_ptr<Scan> scan2 = scan;
 
   EXPECT_EQ(scan.use_count(), 2);
-  scan->before_first();
-  EXPECT_TRUE(scan->next());
+  scan->before_first().value();
+  EXPECT_TRUE(scan->next().value());
 }

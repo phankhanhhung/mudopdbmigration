@@ -33,7 +33,7 @@ EmbeddedResultSet::EmbeddedResultSet(std::shared_ptr<Plan> plan,
 bool EmbeddedResultSet::next() {
     if (s_) {
         try {
-            return s_->next();
+            return s_->next().value();
         } catch (const std::exception& e) {
             if (conn_) conn_->rollback();
             throw std::runtime_error(std::string("ResultSet::next: ") + e.what());
@@ -46,7 +46,7 @@ int32_t EmbeddedResultSet::get_int(const std::string& fldname) {
     std::string fld = to_lowercase(fldname);
     if (s_) {
         try {
-            return s_->get_int(fld);
+            return s_->get_int(fld).value();
         } catch (const std::exception& e) {
             if (conn_) conn_->rollback();
             throw std::runtime_error(std::string("ResultSet::get_int: ") + e.what());
@@ -59,7 +59,7 @@ std::string EmbeddedResultSet::get_string(const std::string& fldname) {
     std::string fld = to_lowercase(fldname);
     if (s_) {
         try {
-            return s_->get_string(fld);
+            return s_->get_string(fld).value();
         } catch (const std::exception& e) {
             if (conn_) conn_->rollback();
             throw std::runtime_error(std::string("ResultSet::get_string: ") + e.what());
@@ -73,7 +73,7 @@ std::unique_ptr<Metadata> EmbeddedResultSet::get_meta_data() const {
 }
 
 void EmbeddedResultSet::close() {
-    if (s_) s_->close();
+    if (s_) s_->close().value();
     if (conn_) conn_->close();
 }
 

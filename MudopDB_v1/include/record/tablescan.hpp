@@ -31,22 +31,22 @@ public:
               const Layout& layout);
 
     // Scan interface implementation
-    void before_first() override;
-    bool next() override;
-    int get_int(const std::string& fldname) override;
-    std::string get_string(const std::string& fldname) override;
-    Constant get_val(const std::string& fldname) override;
+    DbResult<void> before_first() override;
+    DbResult<bool> next() override;
+    DbResult<int> get_int(const std::string& fldname) override;
+    DbResult<std::string> get_string(const std::string& fldname) override;
+    DbResult<Constant> get_val(const std::string& fldname) override;
     bool has_field(const std::string& fldname) const override;
-    void close() override;
+    DbResult<void> close() override;
 
     // UpdateScan interface implementation
-    void set_val(const std::string& fldname, const Constant& val) override;
-    void set_int(const std::string& fldname, int32_t val) override;
-    void set_string(const std::string& fldname, const std::string& val) override;
-    void insert() override;
-    void delete_record() override;
+    DbResult<void> set_val(const std::string& fldname, const Constant& val) override;
+    DbResult<void> set_int(const std::string& fldname, int32_t val) override;
+    DbResult<void> set_string(const std::string& fldname, const std::string& val) override;
+    DbResult<void> insert() override;
+    DbResult<void> delete_record() override;
     std::optional<RID> get_rid() const override;
-    void move_to_rid(const RID& rid) override;
+    DbResult<void> move_to_rid(const RID& rid) override;
 
 private:
     void move_to_block(int32_t blknum);
