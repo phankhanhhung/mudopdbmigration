@@ -1,7 +1,21 @@
-# Review Kiến Trúc: MudopDB_v1 (C++) vs NMDB2 (Rust) - Chỉ Các Phần Đã Hoàn Thành
+# Review Kien Truc: MudopDB_v1 (C++) vs NMDB2 (Rust) - Toan Bo Cac Layer
 
-**Ngày:** 7 tháng 2, 2026
-**Phạm vi:** So sánh chi tiết 4 layers đã implement: File, Log, Buffer, Record
+**Ngay:** 8 thang 2, 2026
+**Pham vi:** So sanh chi tiet toan bo 8 layers: File, Log, Buffer, Record, Transaction, Query/Optimization, Index/Metadata/Multibuffer, API/Network
+
+---
+
+## Muc Luc
+
+1. [Layer 1: File Layer](#1-layer-1-file-layer)
+2. [Layer 2: Log Layer](#2-layer-2-log-layer)
+3. [Layer 3: Buffer Layer](#3-layer-3-buffer-layer)
+4. [Layer 4: Record Layer](#4-layer-4-record-layer)
+5. [Layer 5: Transaction Layer](#5-layer-5-transaction-layer)
+6. [Layer 6: Query Execution & Optimization](#6-layer-6-query-execution--optimization)
+7. [Layer 7: Index, Metadata & Multi-buffer](#7-layer-7-index-metadata--multi-buffer)
+8. [Layer 8: API & Network](#8-layer-8-api--network)
+9. [Tong Ket](#9-tong-ket)
 
 ---
 
@@ -9,123 +23,45 @@
 
 ### 1.1 BlockId
 
-**Tương đương về chức năng.** Cả hai đều là value type immutable.
+**Tuong duong ve chuc nang.** Ca hai deu la value type immutable.
 
-| Tiêu chí | C++ (`blockid.hpp`) | Rust (`block_id.rs`) |
+| Tieu chi | C++ (`blockid.hpp`) | Rust (`block_id.rs`) |
 |----------|---------------------|----------------------|
-| Hash support | Manual `std::hash` specialization | `#[derive(Hash)]` - tự sinh |
+| Hash support | Manual `std::hash` specialization | `#[derive(Hash)]` - tu sinh |
 | Equality | Manual `operator==`, `operator!=` | `#[derive(Eq, PartialEq)]` |
-| Ordering | Manual `operator<` | Không có (chưa cần) |
+| Ordering | Manual `operator<` | Khong co (chua can) |
 | Display | `to_string()` method | `impl Display` trait |
 | Clone | Implicit (copy constructor) | `#[derive(Clone)]` |
 
-**Nhận xét:** Rust ngắn gọn hơn nhờ derive macros. C++ phải viết manual hơn nhưng cung cấp `operator<` (cho `std::map`) mà Rust không cần.
+**Nhan xet:** Rust ngan gon hon nho derive macros. C++ phai viet manual hon nhung cung cap `operator<` (cho `std::map`) ma Rust khong can.
 
 ### 1.2 Page
 
-**Tương đương về chức năng.** Cả hai dùng big-endian encoding, format `[4-byte length][data]` cho bytes/strings.
+**Tuong duong ve chuc nang.** Ca hai dung big-endian encoding, format `[4-byte length][data]` cho bytes/strings.
 
-| Tiêu chí | C++ (`page.cpp`) | Rust (`page.rs`) |
+| Tieu chi | C++ (`page.cpp`) | Rust (`page.rs`) |
 |----------|-------------------|-------------------|
 | Bounds checking | Explicit `check_bounds()` throw `out_of_range` | Implicit qua Rust slice panics |
-| get_string return | `std::string` (luôn thành công) | `Result<String, FromUtf8Error>` |
+| get_string return | `std::string` (luon thanh cong) | `Result<String, FromUtf8Error>` |
 | get_bytes return | `const uint8_t*` (raw pointer) | `&[u8]` (safe slice) |
-| Negative length check | `if (length < 0)` throw | Không cần (dùng `usize`) |
-| contents() visibility | `public` | `pub(in crate)` - chỉ nội bộ |
+| Negative length check | `if (length < 0)` throw | Khong can (dung `usize`) |
+| contents() visibility | `public` | `pub(in crate)` - chi noi bo |
 
-**Khác biệt đáng chú ý:**
+**Van de C++:** `get_bytes` tra raw pointer ma khong kem length. Caller phai goi `get_bytes_length()` rieng. Neu quen goi hoac dung sai length -> buffer overflow. Rust tra `&[u8]` slice da bao gom length.
 
-```cpp
-// C++: get_bytes trả raw pointer - caller phải tự biết length
-const uint8_t* Page::get_bytes(size_t offset) const {
-    check_bounds(offset, 4);
-    int32_t length = get_int(offset);
-    if (length < 0) throw std::runtime_error("Invalid byte array length");
-    check_bounds(offset + 4, static_cast<size_t>(length));
-    return &bb_[offset + 4];  // Raw pointer, không kèm length
-}
-```
-
-```rust
-// Rust: get_bytes trả safe slice - length gắn liền với data
-pub fn get_bytes(&self, offset: usize) -> &[u8] {
-    let len = self.get_int(offset) as usize;
-    &self.bb[offset + 4..offset + 4 + len]  // Slice = pointer + length
-}
-```
-
-**Vấn đề C++:** `get_bytes` trả raw pointer mà không kèm length. Caller phải gọi `get_bytes_length()` riêng. Nếu quên gọi hoặc dùng sai length -> buffer overflow. Rust trả `&[u8]` slice đã bao gồm length.
-
-**Vấn đề Rust:** `get_string` trả `Result` nhưng caller phải handle UTF-8 error. C++ bỏ qua validation UTF-8 (đơn giản hơn nhưng không safe).
+**Van de Rust:** `get_string` tra `Result` nhung caller phai handle UTF-8 error. C++ bo qua validation UTF-8 (don gian hon nhung khong safe).
 
 ### 1.3 FileMgr
 
-| Tiêu chí | C++ (`filemgr.cpp`) | Rust (`filemgr.rs`) |
+| Tieu chi | C++ (`filemgr.cpp`) | Rust (`filemgr.rs`) |
 |----------|---------------------|---------------------|
 | Constructor | Throw-on-error (implicit) | `Result<FileMgr, Error>` |
-| Thread safety | `std::mutex` cho mọi method | Không có mutex |
-| File caching | `open_files_: HashMap<name, block_count>` | Không cache - đọc metadata mỗi lần |
-| read() khi file chưa có | **Silent return** - page giữ zeros | Trả `Ok(())` - page giữ zeros nếu file ngắn hơn |
+| Thread safety | `std::mutex` cho moi method | Khong co mutex |
+| File caching | `open_files_: HashMap<name, block_count>` | Khong cache - doc metadata moi lan |
+| read() khi file chua co | **Silent return** - page giu zeros | Tra `Ok(())` - page giu zeros neu file ngan hon |
 
-**Khác biệt kiến trúc quan trọng:**
-
-```cpp
-// C++ FileMgr: Có mutex, cache file size
-class FileMgr {
-    mutable std::mutex mutex_;
-    std::unordered_map<std::string, size_t> open_files_;  // Cache
-};
-
-void FileMgr::read(const BlockId& blk, Page& page) {
-    std::lock_guard<std::mutex> lock(mutex_);   // Thread-safe
-    if (!fs::exists(filepath)) return;           // Silent - page zeroed
-    // ...
-}
-
-size_t FileMgr::length(const std::string& filename) {
-    auto it = open_files_.find(filename);
-    if (it != open_files_.end()) return it->second;  // Cache hit
-    // ...
-}
-```
-
-```rust
-// Rust FileMgr: Không mutex, không cache
-pub struct FileMgr {
-    db_directory: String,
-    blocksize: usize,
-    is_new: bool,
-    // Không có mutex, không có cache
-}
-
-pub fn read(&self, blk: &BlockId, p: &mut Page) -> Result<(), Error> {
-    let mut f = self.get_file(blk.file_name())?;  // Mở file mỗi lần
-    // ...
-    if f.metadata()?.len() >= pos + p.contents().len() as u64 {
-        f.read_exact(p.contents())?;               // Chỉ đọc nếu đủ size
-    }
-    Ok(())
-}
-
-pub fn length(&self, filename: &str) -> Result<usize, Error> {
-    let file = self.get_file(filename)?;            // Mở file mỗi lần
-    Ok(file.metadata()?.len() as usize / self.blocksize)
-}
-```
-
-**Đánh giá Layer File:**
-
-| | C++ tốt hơn | Rust tốt hơn | Tương đương |
-|---|------------|-------------|------------|
-| Thread safety | ✅ Có mutex | | |
-| Performance (cache) | ✅ Cache file size | | |
-| Error handling | | ✅ Result-based | |
-| API safety (get_bytes) | | ✅ Slice thay raw ptr | |
-| Temp file cleanup | | | ✅ |
-| Constructor error | | ✅ Trả Result | |
-
-**C++ thắng ở:** Thread safety (mutex) và performance (file size cache).
-**Rust thắng ở:** Error handling và API safety.
+**C++ thang o:** Thread safety (mutex) va performance (file size cache).
+**Rust thang o:** Error handling va API safety.
 
 ---
 
@@ -133,123 +69,31 @@ pub fn length(&self, filename: &str) -> Result<usize, Error> {
 
 ### 2.1 LogMgr
 
-| Tiêu chí | C++ (`logmgr.cpp`) | Rust (`logmgr.rs`) |
+| Tieu chi | C++ (`logmgr.cpp`) | Rust (`logmgr.rs`) |
 |----------|---------------------|---------------------|
-| Constructor fail | Không thể fail (nhưng nên) | `Result<LogMgr, Error>` |
+| Constructor fail | Khong the fail (nhung nen) | `Result<LogMgr, Error>` |
 | append() return | `size_t` (LSN) | `Result<usize, Error>` |
 | flush() return | `void` | `Result<(), Error>` |
 | Shared ownership | `std::shared_ptr<FileMgr>` | `Arc<FileMgr>` |
-| Thread safety | Không (comment ghi rõ) | Không (wrapper bên ngoài) |
+| Thread safety | Khong (comment ghi ro) | Khong (wrapper ben ngoai) |
 
-**Logic gần như giống hệt nhau:**
+**Logic gan nhu giong het nhau:** Backward-growing log, flush khi het page, append new block.
 
-```cpp
-// C++ LogMgr::append
-size_t LogMgr::append(const std::vector<uint8_t>& logrec) {
-    int32_t boundary = logpage_.get_int(0);
-    int32_t recsize = static_cast<int32_t>(logrec.size());
-    int32_t bytesneeded = recsize + 4;
-    if (boundary - bytesneeded < 4) {
-        flush_impl();
-        currentblk_ = append_new_block();
-        boundary = logpage_.get_int(0);
-    }
-    int32_t recpos = boundary - bytesneeded;
-    logpage_.set_bytes(static_cast<size_t>(recpos), logrec.data(), logrec.size());
-    logpage_.set_int(0, recpos);
-    latest_lsn_++;
-    return latest_lsn_;
-}
-```
-
-```rust
-// Rust LogMgr::append
-pub fn append(&mut self, logrec: &Vec<u8>) -> Result<usize, Error> {
-    let mut boundary = self.logpage.get_int(0);
-    let recsize = logrec.len() as i32;
-    let bytesneeded = recsize + 4;
-    if boundary - bytesneeded < 4 {
-        self.flush_impl()?;
-        self.currentblk = self.append_new_block()?;
-        boundary = self.logpage.get_int(0);
-    }
-    let recpos = boundary - bytesneeded;
-    self.logpage.set_bytes(recpos as usize, logrec);
-    self.logpage.set_int(0, recpos);
-    self.lastest_lsn += 1;
-    Ok(self.lastest_lsn)
-}
-```
-
-**Khác biệt nhỏ nhưng đáng chú ý:**
-
-1. **Constructor initialization:** C++ phải khởi tạo `currentblk_("", 0)` dummy rồi gán lại - hơi hacky. Rust dùng `if/else` expression trả thẳng value.
-
-```cpp
-// C++: Phải dùng dummy BlockId("", 0) rồi gán lại
-LogMgr::LogMgr(...)
-    : currentblk_("", 0),  // Dummy - sẽ bị ghi đè
-      latest_lsn_(0), last_saved_lsn_(0) {
-    if (logsize == 0) {
-        currentblk_ = append_new_block_helper(...);
-    } else {
-        currentblk_ = file::BlockId(logfile_, logsize - 1);
-        fm_->read(currentblk_, logpage_);
-    }
-}
-```
-
-```rust
-// Rust: Conditional expression, không cần dummy
-let currentblk = if logsize == 0 {
-    append_new_block(&fm, &mut logpage, logfile)?
-} else {
-    let currentblk = BlockId::new(logfile, logsize as i32 - 1);
-    fm.read(&currentblk, &mut logpage)?;
-    currentblk
-};
-```
-
-2. **Error propagation trong flush:** C++ `flush_impl()` gọi `fm_->write()` mà write có thể throw - exception sẽ propagate ngầm. Rust explicit với `?`.
+**Khac biet nho:**
+- C++ phai dung dummy `BlockId("", 0)` roi gan lai trong constructor. Rust dung `if/else` expression tra thang value.
+- Rust explicit voi `?` cho error propagation, C++ dung implicit exception.
 
 ### 2.2 LogIterator
 
-| Tiêu chí | C++ (`logiterator.cpp`) | Rust (`logiterator.rs`) |
+| Tieu chi | C++ (`logiterator.cpp`) | Rust (`logiterator.rs`) |
 |----------|-------------------------|-------------------------|
 | Interface | Custom `has_next()` / `next()` | `impl Iterator` (standard trait) |
-| next() khi hết | Throw `runtime_error` | Return `None` |
-| Construction | Constructor trực tiếp | `Result<LogIterator, Error>` |
+| next() khi het | Throw `runtime_error` | Return `None` |
+| Error trong iteration | Khong co | `.ok()` nuot loi (design limitation) |
 
-**Khác biệt quan trọng:**
+Rust `LogIterator` implement `Iterator` trait nen duoc dung voi standard library iterator combinators (map, filter, take, collect...). C++ phai viet while loop thu cong.
 
-```cpp
-// C++: Custom iteration protocol
-while (iter->has_next()) {
-    auto rec = iter->next();  // Throw nếu gọi sai
-    // ...
-}
-```
-
-```rust
-// Rust: Standard Iterator trait - dùng được for loop, collect, map...
-for rec in log_mgr.iterator()? {
-    // rec là Vec<u8>
-}
-// Hoặc: iter.map(...).filter(...).collect()
-```
-
-Rust `LogIterator` implement `Iterator` trait nên được dùng với toàn bộ standard library iterator combinators (map, filter, take, collect...). C++ phải viết while loop thủ công.
-
-**Đánh giá Layer Log:**
-
-| | C++ tốt hơn | Rust tốt hơn | Tương đương |
-|---|------------|-------------|------------|
-| Core logic | | | ✅ Giống nhau |
-| Constructor init | | ✅ Không cần dummy | |
-| Iterator integration | | ✅ Standard trait | |
-| Error propagation | | ✅ Explicit Result | |
-
-**Kết luận:** Logic giống nhau. Rust sạch hơn ở initialization và iterator design.
+**Ket luan Layer Log:** Logic giong nhau. Rust sach hon o initialization va iterator design.
 
 ---
 
@@ -257,139 +101,24 @@ Rust `LogIterator` implement `Iterator` trait nên được dùng với toàn b�
 
 ### 3.1 Buffer
 
-| Tiêu chí | C++ (`buffer.cpp`) | Rust (`buffer.rs`) |
+| Tieu chi | C++ (`buffer.cpp`) | Rust (`buffer.rs`) |
 |----------|---------------------|---------------------|
 | LogMgr access | `shared_ptr<LogMgr>` (shared, unguarded) | `Arc<Mutex<LogMgr>>` (shared, guarded) |
 | assign_to_block return | `void` (exception on error) | `Result<(), Error>` |
 | flush() return | `void` | `Result<(), Error>` |
 | Visibility control | Comment "Package-private" | `pub(in crate::buffer)` compiler-enforced |
 
-**Khác biệt thiết kế quan trọng:**
-
-```cpp
-// C++: assign_to_block và flush không trả error
-void Buffer::assign_to_block(const file::BlockId& blk) {
-    flush();              // Có thể throw - nhưng caller không biết
-    blk_ = blk;
-    fm_->read(blk, contents_);  // Có thể throw
-    pins_ = 0;
-}
-
-void Buffer::flush() {
-    if (txnum_.has_value()) {
-        if (lsn_.has_value()) {
-            lm_->flush(lsn_.value());   // LogMgr không thread-safe!
-        }
-        if (blk_.has_value()) {
-            fm_->write(blk_.value(), contents_);
-        }
-        txnum_ = std::nullopt;
-    }
-}
-```
-
-```rust
-// Rust: Mọi I/O đều trả Result, LogMgr phải lock
-pub(in crate::buffer) fn assign_to_block(&mut self, b: BlockId) -> Result<(), Error> {
-    self.flush()?;        // Error propagated
-    self.blk = Some(b.clone());
-    self.fm.read(&b, &mut self.contents)?;
-    self.pins = 0;
-    Ok(())
-}
-
-pub(in crate::buffer) fn flush(&mut self) -> Result<(), Error> {
-    if self.txnum.is_some() {
-        if let Some(lsn) = self.lsn {
-            self.lm.lock().unwrap().flush(lsn)?;  // Phải lock LogMgr
-        }
-        if let Some(ref blk) = self.blk {
-            self.fm.write(blk, &mut self.contents)?;
-        }
-        self.txnum = None;
-    }
-    Ok(())
-}
-```
-
-**Vấn đề C++ quan trọng:** `Buffer::flush()` gọi `lm_->flush()` trên `shared_ptr<LogMgr>`. LogMgr không thread-safe (ghi rõ trong comment). Nếu 2 buffers cùng flush song song -> data race trên LogMgr. Rust bắt buộc `lm.lock().unwrap()` nên không thể quên.
-
-**Visibility:** C++ chỉ ghi comment "Package-private" - compiler không enforce. Rust dùng `pub(in crate::buffer)` - compile error nếu gọi từ ngoài module buffer.
+**Van de C++ quan trong:** `Buffer::flush()` goi `lm_->flush()` tren `shared_ptr<LogMgr>`. LogMgr khong thread-safe. Neu 2 buffers cung flush song song -> data race tren LogMgr. Rust bat buoc `lm.lock().unwrap()` nen khong the quen.
 
 ### 3.2 BufferMgr
 
-| Tiêu chí | C++ (`buffermgr.cpp`) | Rust (`buffermgr.rs`) |
+| Tieu chi | C++ (`buffermgr.cpp`) | Rust (`buffermgr.rs`) |
 |----------|------------------------|------------------------|
 | pin() return | `size_t` (throw on timeout) | `Result<usize, AbortError>` |
 | Wait mechanism | `sleep_for(100ms)` polling | `park_timeout(max_time)` |
-| Error type | `BufferAbortException` (1 loại) | `AbortError` enum (Time/IO/General) |
-| flush_all return | `void` | `Result<(), Error>` |
+| Error type | `BufferAbortException` (1 loai) | `AbortError` enum (Time/IO/General) |
 
-**Khác biệt wait mechanism:**
-
-```cpp
-// C++: Busy-polling mỗi 100ms
-size_t BufferMgr::pin(const file::BlockId& blk) {
-    auto start_time = std::chrono::steady_clock::now();
-    std::optional<size_t> idx = try_to_pin(blk);
-    while (!idx.has_value() && !waiting_too_long(start_time)) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Busy poll
-        idx = try_to_pin(blk);
-    }
-    if (!idx.has_value()) throw BufferAbortException();
-    return idx.value();
-}
-```
-
-```rust
-// Rust: Thread parking - ngủ đến khi được đánh thức hoặc timeout
-pub fn pin(&mut self, blk: &BlockId) -> Result<usize, AbortError> {
-    let timestamp = SystemTime::now();
-    let mut idx = self.try_to_pin(blk)?;
-    while idx.is_none() && !waiting_too_long(timestamp, self.max_time)? {
-        park_timeout(Duration::from_millis(self.max_time as u64));  // Park
-        idx = self.try_to_pin(blk)?;
-    }
-    match idx {
-        Some(idx) => Ok(idx),
-        None => Err(AbortError::General),
-    }
-}
-```
-
-**Nhận xét:** C++ polling 100ms gây overhead không cần thiết. Tuy nhiên, cả hai đều chưa optimal - lý tưởng nên dùng condition variable (C++) hoặc `Condvar` (Rust).
-
-**Error type richness:**
-
-```cpp
-// C++: Chỉ 1 loại exception, chỉ 1 message
-class BufferAbortException : public std::runtime_error {
-    BufferAbortException()
-        : std::runtime_error("Buffer abort: pool exhausted after timeout") {}
-};
-```
-
-```rust
-// Rust: Phân biệt nguyên nhân lỗi
-pub enum AbortError {
-    Time(SystemTimeError),  // Lỗi system time
-    IO(Error),              // Lỗi I/O khi assign_to_block
-    General,                // Timeout hết pool
-}
-```
-
-C++ gộp mọi lỗi vào 1 message string. Rust phân biệt rõ: timeout? I/O error? system time error? - giúp caller xử lý chính xác hơn.
-
-**Đánh giá Layer Buffer:**
-
-| | C++ tốt hơn | Rust tốt hơn | Tương đương |
-|---|------------|-------------|------------|
-| Core pin/unpin logic | | | ✅ |
-| Error granularity | | ✅ AbortError enum | |
-| LogMgr access safety | | ✅ Mutex-guarded | |
-| Visibility enforcement | | ✅ `pub(in crate)` | |
-| Wait mechanism | | ≈ (cả hai chưa optimal) | |
-| flush_all error handling | | ✅ Result | |
+C++ polling 100ms gay overhead. Rust `park_timeout` hieu qua hon. Tuy nhien ca hai chua optimal - ly tuong nen dung condition variable.
 
 ---
 
@@ -397,263 +126,555 @@ C++ gộp mọi lỗi vào 1 message string. Rust phân biệt rõ: timeout? I/O
 
 ### 4.1 Schema & Layout
 
-**Gần như tương đương hoàn toàn.** Cùng data structures, cùng logic.
+**Gan nhu tuong duong hoan toan.** Cung data structures, cung logic.
 
-| Tiêu chí | C++ | Rust |
-|----------|-----|------|
-| Type enum | `Type::INTEGER = 4, VARCHAR = 12` | `Type::Integer = 4, Varchar = 12` |
-| Field storage | `vector<string>` + `unordered_map<string, FieldInfo>` | `Vec<String>` + `HashMap<String, FieldInfo>` |
-| Layout ownership | `shared_ptr<Schema>` | `Arc<Schema>` |
-| Layout cloneable | Không (manual copy) | `#[derive(Clone)]` |
+### 4.2 RecordPage - **Khac biet kien truc lon nhat cua Layer 1-4**
 
-Khác biệt nhỏ: Rust `Layout` implement `Clone` cho phép cheap copy (vì `Arc` clone chỉ tăng refcount). C++ không implement copy nên phải pass by reference hoặc dùng `shared_ptr<Layout>`.
-
-### 4.2 RecordPage - **Khác biệt kiến trúc lớn nhất**
-
-Đây là nơi hai version phân tách rõ nhất:
-
-```cpp
-// C++ RecordPage: Truy cập TRỰC TIẾP Buffer
-class RecordPage {
-    buffer::Buffer& buff_;   // Reference trực tiếp vào buffer
-    Layout layout_;
-};
-
-// Đọc/ghi data trực tiếp lên buffer page
-int32_t RecordPage::get_int(size_t slot, const std::string& fldname) {
-    size_t fldpos = offset(slot) + layout_.offset(fldname);
-    return buff_.contents().get_int(fldpos);  // Trực tiếp
-}
-
-void RecordPage::set_int(size_t slot, const std::string& fldname, int32_t val) {
-    size_t fldpos = offset(slot) + layout_.offset(fldname);
-    buff_.contents().set_int(fldpos, val);     // Trực tiếp
-    buff_.set_modified(0, std::nullopt);       // Hardcode txnum=0, no LSN
-}
-```
-
-```rust
-// Rust RecordPage: Truy cập QUA Transaction
-pub struct RecordPage {
-    tx: Arc<Mutex<Transaction>>,  // Qua transaction layer
-    blk: BlockId,
-    layout: Layout,
-}
-
-// Đọc/ghi qua Transaction -> Transaction acquire lock -> rồi mới đọc buffer
-pub fn get_int(&mut self, slot: usize, fldname: &str) -> Result<i32, TransactionError> {
-    let fldpos = self.offset(slot) + self.layout.offset(fldname);
-    self.tx.lock().unwrap().get_int(&self.blk, fldpos)  // Qua Transaction
-}
-
-pub fn set_int(&mut self, slot: usize, fldname: &str, val: i32) -> Result<(), TransactionError> {
-    let fldpos = self.offset(slot) + self.layout.offset(fldname);
-    self.tx.lock().unwrap().set_int(&self.blk, fldpos, val, true)  // Qua Transaction, có logging
-}
-```
-
-**Hệ quả của khác biệt này:**
-
-| Hệ quả | C++ (Direct Buffer) | Rust (Via Transaction) |
+| He qua | C++ (Direct Buffer) | Rust (Via Transaction) |
 |---------|---------------------|------------------------|
-| WAL logging khi write | Không (hardcode `txnum=0, lsn=nullopt`) | Có (Transaction write log trước data) |
-| Concurrency control | Không | Transaction acquire S/X lock |
-| Crash recovery | Không thể rollback | Transaction rollback undo changes |
-| set_modified marker | Hardcode `(0, nullopt)` | Actual txnum + LSN từ log |
+| WAL logging khi write | **Khong** (hardcode `txnum=0, lsn=nullopt`) | Co (Transaction write log truoc data) |
+| Concurrency control | Khong | Transaction acquire S/X lock |
+| Crash recovery | Khong the rollback | Transaction rollback undo changes |
+| set_modified marker | Hardcode `(0, nullopt)` | Actual txnum + LSN tu log |
 
-C++ ghi `set_modified(0, std::nullopt)` cho MỌI write operation - tức là:
-- `txnum = 0` luôn -> không phân biệt transaction nào sửa
-- `lsn = nullopt` luôn -> không link tới log record nào
-- Khi flush, Buffer sẽ gọi `lm_->flush(lsn)` nhưng lsn là nullopt -> skip log flush -> **vi phạm WAL protocol**
+**Luu y:** C++ RecordPage da duoc cap nhat trong Phase 5 de goi qua Transaction, khac phuc van de WAL violation.
 
 ### 4.3 TableScan
 
-| Tiêu chí | C++ (`tablescan.cpp`) | Rust (`tablescan.rs`) |
-|----------|------------------------|------------------------|
-| Dependency | `shared_ptr<BufferMgr>` | `Arc<Mutex<Transaction>>` |
-| Interface | Inherits `Scan` (virtual) | Implements `ScanControl` + `UpdateScanControl` |
-| Error handling | Void/throw | `Result<T, TransactionError>` |
-| Current record page | `unique_ptr<RecordPage>` | `Option<RecordPage>` |
-| Pin/unpin | Manual via BufferMgr | Automatic via Transaction |
+C++ `next()` doc ro rang, logic flow de hieu hon. Rust verbose vi borrow checker constraints va `Option<RecordPage>` phai `if let Some` moi lan truy cap.
 
-**Khác biệt close():**
+---
+
+## 5. Layer 5: Transaction Layer
+
+### 5.1 Transaction Main Class
+
+| Tieu chi | C++ (`transaction.hpp/cpp`) | Rust (`transaction.rs`) |
+|----------|------------------------------|--------------------------|
+| Constructor | Khong the fail | `Result<Transaction, Error>` |
+| Transaction ID | `static atomic<size_t>` seq_cst | `static AtomicUsize` SeqCst |
+| Error handling | Exceptions (`std::runtime_error`) | `Result<T, TransactionError>` enum |
+| Resource cleanup | RAII via destructors | Explicit via Drop trait |
+
+**Error type:** C++ gop moi loi vao `std::runtime_error` voi string message. Rust phan biet ro:
+
+```rust
+pub enum TransactionError {
+    Abort(AbortError),
+    Recovery(RecoveryError),
+    Utf8(FromUtf8Error),
+    IO(Error),
+    General,
+}
+```
+
+**Commit/Rollback:** Logic giong nhau - flush dirty buffers, write commit/rollback record, flush log, release locks, unpin all.
+
+### 5.2 Recovery System
+
+Ca hai ho tro 6 log record types giong nhau: CHECKPOINT(0), START(1), COMMIT(2), ROLLBACK(3), SETINT(4), SETSTRING(5).
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| LogRecord interface | `virtual` base class | `trait LogRecord` + `Box<dyn LogRecord>` |
+| Factory function | `unique_ptr<LogRecord>` | `Result<Box<dyn LogRecord>, TransactionError>` |
+| Undo signature | `void undo(Transaction& tx)` | `Result<(), TransactionError>` |
+
+**WAL Protocol (ca hai):**
+1. Acquire exclusive lock (`x_lock`)
+2. Write log record TRUOC khi modify data (neu `ok_to_log`)
+3. Modify buffer contents
+4. Mark buffer as modified voi LSN
 
 ```cpp
-// C++: Phải tự quản lý buffer index
-void TableScan::close() {
-    if (current_buffer_idx_.has_value()) {
-        bm_->unpin(current_buffer_idx_.value());  // Manual unpin
-        current_buffer_idx_ = std::nullopt;
+// C++ WAL - giong Rust nhung dung exception
+void Transaction::set_int(const file::BlockId& blk, size_t offset,
+                           int32_t val, bool ok_to_log) {
+    concur_mgr_.x_lock(blk);
+    // ... recovery_mgr_.set_int -> log TRUOC
+    buff.contents().set_int(offset, val);  // modify SAU
+    buff.set_modified(txnum_, lsn);
+}
+```
+
+### 5.3 Concurrency / Locking
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| Global Lock Table | Meyer's singleton + static mutex | `Lazy<Mutex<LockTable>>` |
+| Lock representation | `unordered_map<BlockId, string>` ("S"/"X") | `HashMap<BlockId, String>` ("S"/"X") |
+| Deadlock detection | Timeout 10s | Timeout 10s |
+| Wait mechanism | `sleep_for(max_time_)` | `park_timeout(max_time)` |
+
+**Bug chung:** Ca hai track lock type bang `String` ("S"/"X") - nen dung enum. Lock upgrade tu S -> X chi ghi nhan o local map, khong goi `x_lock()` tren global lock table.
+
+### 5.4 BufferList (Per-Transaction Buffer Tracking)
+
+Logic tuong duong: `buffers_` map (BlockId -> index) cho fast lookup, `pins_` vector cho pin count tracking.
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| Error handling | Throws exception | Returns `Result` |
+| Visibility | Public | `pub(in crate::tx)` |
+| Buffer access | Direct via shared_ptr | Explicit lock acquisition |
+
+### Danh Gia Layer Transaction
+
+| Component | C++ | Rust | Winner |
+|-----------|-----|------|--------|
+| Error handling | Exceptions | Result<T, TransactionError> | **Rust** |
+| Recovery protocol | Correct WAL | Correct WAL | **Hoa** |
+| Concurrency | Manual mutex | Type-enforced Mutex | **Rust** |
+| Lock table | Global singleton | Lazy static | **Hoa** |
+| Code clarity | Familiar OOP | More verbose | **C++** |
+| Thread safety | Manual discipline | Compiler-enforced | **Rust** |
+
+---
+
+## 6. Layer 6: Query Execution & Optimization
+
+### 6.1 Scan Interface
+
+**C++ - Abstract Base Class:**
+```cpp
+class Scan {
+public:
+    virtual ~Scan() = default;
+    virtual void before_first() = 0;
+    virtual bool next() = 0;
+    virtual int get_int(const std::string& fldname) = 0;
+    virtual std::string get_string(const std::string& fldname) = 0;
+    virtual Constant get_val(const std::string& fldname) = 0;
+    virtual bool has_field(const std::string& fldname) const = 0;
+    virtual void close() = 0;
+};
+```
+
+**Rust - Trait + Enum Dispatch:**
+```rust
+#[enum_dispatch(Scan)]
+pub trait ScanControl {
+    fn before_first(&mut self) -> Result<(), TransactionError>;
+    fn next(&mut self) -> Result<bool, TransactionError>;
+    fn get_int(&mut self, fldname: &str) -> Result<i32, TransactionError>;
+    // ...
+}
+
+#[enum_dispatch]
+pub enum Scan {
+    Product(ProductScan), Project(ProjectScan), Select(SelectScan),
+    Table(TableScan), IndexSelect(IndexSelectScan), IndexJoin(IndexJoinScan),
+    Chunk(ChunkScan), MultibufferProduct(MultibufferProductScan),
+    Sort(SortScan), GroupBy(GroupByScan), MergeJoin(MergeJoinScan),
+}
+```
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| Dispatch | Virtual (runtime, vtable) | enum_dispatch (compile-time, zero-cost) |
+| Error handling | Exceptions | Result<T, Error> |
+| Extensibility | Open (any class can inherit) | Closed (enum variants fixed) |
+| UpdateScan cast | `dynamic_cast<UpdateScan*>` (co the fail) | Pattern matching (exhaustive) |
+
+### 6.2 Constant / Expression / Term / Predicate
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| Constant storage | `std::variant<int, string>` (type-safe union) | Dual `Option<i32>` + `Option<String>` |
+| Expression::evaluate | Takes `Scan&` (polymorphic) | Generic `T: ScanControl` |
+| Predicate operations | Identical logic | Identical logic |
+| Derive traits | Manual operators | `#[derive(Clone, Eq, Hash, ...)]` |
+
+**C++ Constant tot hon:** `std::variant` la union thuc su, chi 1 value tai 1 thoi diem. Rust dung 2 Option fields -> lang phi bo nho.
+
+### 6.3 SQL Parser
+
+Ca hai dung recursive descent parser voi Lexer tuong tu.
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| Error handling | Exceptions | `Result<T, BadSyntaxError>` |
+| Update command type | `std::variant<InsertData, DeleteData, ...>` | `enum Object` voi enum_dispatch |
+| Token type | `enum class TokenType` | `enum TokenType` |
+
+Logic parsing gan nhu giong nhau. Rust dung `?` operator cho error propagation, C++ dung implicit exceptions.
+
+### 6.4 Plan Interface
+
+**C++ - Abstract Base Class:**
+```cpp
+class Plan {
+public:
+    virtual std::unique_ptr<Scan> open() = 0;
+    virtual size_t blocks_accessed() const = 0;
+    virtual size_t records_output() const = 0;
+    virtual size_t distinct_values(const std::string& fldname) const = 0;
+    virtual std::shared_ptr<record::Schema> schema() const = 0;
+};
+```
+
+**Rust - Trait + Enum:**
+```rust
+#[derive(Clone)]
+#[enum_dispatch]
+pub enum Plan {
+    Table(TablePlan), Select(SelectPlan), Project(ProjectPlan),
+    Product(ProductPlan), IndexSelect(IndexSelectPlan), IndexJoin(IndexJoinPlan),
+    Materialize(MaterializePlan), MultibufferProduct(MultibufferProductPlan),
+    Sort(SortPlan), GroupBy(GroupByPlan), MergeJoin(MergeJoinPlan),
+    OptimizedProduct(OptimizedProductPlan),
+}
+```
+
+**Khac biet quan trong:**
+- C++ `ProductScan` owns scans via `unique_ptr` (exclusive, don gian)
+- Rust `ProductScan` dung `Arc<Mutex<Scan>>` (shared, thread-safe nhung overhead)
+- Rust `Plan` enum la `Clone` -> co the try multiple plan orderings
+
+### 6.5 Query Planner / Optimizer
+
+| Component | C++ | Rust |
+|-----------|-----|------|
+| BasicQueryPlanner | Co | Co |
+| BetterQueryPlanner | **Khong** | Co (chon product order toi uu) |
+| HeuristicQueryPlanner | Co | Co |
+| OptimizedProductPlan | **Khong** | Co (wrapper chon optimal order) |
+
+Rust co them 2 optimizer components ma C++ khong co: `BetterQueryPlanner` va `OptimizedProductPlan`.
+
+**HeuristicQueryPlanner:** Logic giong nhau - greedy algorithm chon lowest-cost join/product.
+
+### 6.6 Update Commands (Data Structures)
+
+Tuong duong. Ca hai co: InsertData, DeleteData, ModifyData, CreateTableData, CreateViewData, CreateIndexData. Ca hai return by value.
+
+### Danh Gia Layer Query
+
+| Component | C++ | Rust | Winner |
+|-----------|-----|------|--------|
+| Scan dispatch | Virtual (runtime) | enum_dispatch (zero-cost) | **Rust** |
+| Scan ownership | unique_ptr (simple) | Arc<Mutex<>> (safe) | **C++** (simplicity) |
+| Constant type | variant (efficient) | Dual Option (wasteful) | **C++** |
+| Parser | Identical logic | Result-based | **Rust** (error handling) |
+| Plan cloneability | Khong | Clone derive | **Rust** |
+| Optimizer completeness | 2 planners | 4 planners | **Rust** |
+| Code readability | Cleaner | More verbose | **C++** |
+
+---
+
+## 7. Layer 7: Index, Metadata & Multi-buffer
+
+### 7.1 Index Interface
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| Interface | Abstract base class `Index` | Trait `IndexControl` + enum_dispatch |
+| Error handling | Exceptions | Result<T, TransactionError> |
+| Implementations | HashIndex, BTreeIndex | HashIndex, BTreeIndex |
+| Namespace issue | Phai dung `::Index` de tranh conflict | Khong co van de |
+
+### 7.2 Hash Index
+
+Tuong duong. Ca hai dung `NUM_BUCKETS = 100`, hash searchkey de chon bucket, tao TableScan de scan bucket.
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| State storage | `std::optional<TableScan>` voi `emplace` | `Option<TableScan>` |
+| Hashing | `std::hash<Constant>{}` | `DefaultHasher` manual |
+| search_cost() | `size / NUM_BUCKETS` | `size / NUM_BUCKETS` |
+
+### 7.3 B-Tree Index
+
+Ca hai implement B-Tree voi:
+- `BTPage` - low-level page management (get/set records, split, format)
+- `BTreeDir` - directory/internal node navigation
+- `BTreeLeaf` - leaf node operations (insert, delete, overflow chaining)
+- `BTreeIndex` - top-level coordinator
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| Split logic | Identical | Identical |
+| Overflow chaining | Same (flag points to next block) | Same |
+| DirEntry/LeafEntry | Value types | Value types |
+| Error handling | Exceptions | Result propagation |
+
+### 7.4 Index Query Scans
+
+**IndexSelectScan** (equality lookup qua index):
+```cpp
+// C++ - clean, direct
+bool IndexSelectScan::next() {
+    bool ok = idx_->next();
+    if (ok) ts_->move_to_rid(idx_->get_data_rid());
+    return ok;
+}
+```
+
+**IndexJoinScan** (nested-loop join qua index): Logic giong nhau - iterate LHS, for each LHS row search index, fetch matching RHS row.
+
+### 7.5 Metadata Management
+
+| Manager | C++ | Rust | Khac biet |
+|---------|-----|------|-----------|
+| TableMgr | `shared_ptr<TableMgr>` | `Arc<TableMgr>` | Tuong duong |
+| ViewMgr | Direct access | Direct access | Tuong duong |
+| StatMgr | `shared_ptr<StatMgr>` (no mutex) | `Arc<Mutex<StatMgr>>` | **Rust safe hon** |
+| IndexMgr | Direct access | Direct access | Tuong duong |
+| MetadataMgr | Facade pattern | Facade pattern | Tuong duong |
+
+**Khac biet quan trong:** Rust wrap StatMgr trong `Arc<Mutex<>>` vi stat cache co the thay doi (refresh). C++ dung `shared_ptr` khong co mutex -> potential data race khi concurrent stat refresh.
+
+### 7.6 Multi-buffer Operations
+
+| Component | C++ | Rust |
+|-----------|-----|------|
+| BufferNeeds::best_factor | Integer ceiling division | Float `ceil()` |
+| ChunkScan | Vector of RecordPages | Vec of RecordPages |
+| MultibufferProductScan | **Direct nested loop** | **Delegates to ProductScan** |
+| MultibufferProductPlan | TempTable materialization | TempTable materialization |
+
+**Khac biet kien truc MultibufferProductScan:**
+
+```cpp
+// C++ - implements nested loop TRUC TIEP
+bool MultibufferProductScan::next() {
+    while (rhsscan_) {
+        if (rhsscan_->next()) return true;
+        if (!lhsscan_->next()) {
+            if (!use_next_chunk()) return false;
+            if (!lhsscan_->next()) return false;
+        }
+        rhsscan_->before_first();
     }
+    return false;
 }
 ```
 
 ```rust
-// Rust: Unpin qua Transaction
-fn close(&mut self) -> Result<(), AbortError> {
-    if let Some(rp) = &self.rp {
-        self.tx.lock().unwrap().unpin(rp.block())?;  // Transaction quản lý
-    }
-    Ok(())
-}
-```
-
-C++ phải track `current_buffer_idx_` riêng (thêm 1 field state). Rust delegate cho Transaction.
-
-**Khác biệt next():**
-
-```cpp
-// C++: Clean, concise, nhưng không handle errors
-bool TableScan::next() {
-    currentslot_ = rp_->next_after(currentslot_);
-    while (!currentslot_.has_value()) {
-        if (at_last_block()) return false;
-        move_to_block(rp_->block().number() + 1);
-        currentslot_ = rp_->next_after(currentslot_);
-    }
-    return true;
-}
-```
-
-```rust
-// Rust: Verbose hơn vì phải handle Option<RecordPage> + Result
+// Rust - DELEGATE cho ProductScan
 fn next(&mut self) -> Result<bool, TransactionError> {
-    if let Some(rp) = &mut self.rp {
-        self.currentslot = rp.next_after(self.currentslot)?;
-    } else {
-        return Err(TransactionError::General);
+    while let Some(prodscan) = &mut self.prodscan {
+        if prodscan.next()? { return Ok(true); }
+        if !self.use_next_chunk()? { return Ok(false); }
     }
-    while self.currentslot.is_none() {
-        if self.at_last_block()? {
-            return Ok(false);
-        }
-        let mut blknum = None;
-        if let Some(rp) = &self.rp {
-            blknum = Some(rp.block().number() + 1);
-        }
-        // ... more pattern matching
-    }
-    Ok(true)
+    Err(TransactionError::General)
 }
 ```
 
-**Nhận xét:** C++ `next()` đọc rõ ràng, logic flow dễ hiểu hơn. Rust verbose vì:
-1. `rp` là `Option<RecordPage>` nên phải `if let Some` mỗi lần truy cập
-2. Borrow checker không cho mượn `self.rp` mutable rồi lại gọi `self.move_to_block()` -> phải extract `blknum` ra biến tạm trước
+C++ don gian hon va hieu qua hon (khong co layer ProductScan trung gian). Rust phai tao moi `ProductScan` cho moi chunk do `Arc<Mutex<Scan>>` ownership requirement.
 
-Đây là trade-off thực tế: C++ code sạch hơn ở chỗ này, nhưng Rust buộc handle null case.
+### Danh Gia Layer Index/Metadata/Multibuffer
 
-**Đánh giá Layer Record:**
-
-| | C++ tốt hơn | Rust tốt hơn | Tương đương |
-|---|------------|-------------|------------|
-| Schema/Layout | | | ✅ |
-| RecordPage correctness | | ✅ WAL đúng qua Transaction | |
-| TableScan readability | ✅ Clean hơn | | |
-| Error safety | | ✅ Result everywhere | |
-| Null state handling | | ✅ Compiler-checked | |
-
----
-
-## 5. Tổng Kết So Sánh Ngang Hàng
-
-### 5.1 C++ Tốt Hơn Ở Đâu
-
-1. **FileMgr có mutex + file size cache** - Rust FileMgr không có cả hai. Mỗi lần gọi `length()`, Rust phải mở file rồi đọc metadata. C++ cache trong `open_files_` map.
-
-2. **Code readability ở TableScan** - Logic flow trong `next()`, `insert()` của C++ ngắn gọn, dễ đọc hơn. Rust bị verbose do borrow checker constraints.
-
-3. **Consistent style** - C++ code style đồng nhất, documentation comment chi tiết cho mọi method.
-
-### 5.2 Rust Tốt Hơn Ở Đâu
-
-1. **RecordPage qua Transaction vs trực tiếp Buffer** - Đây là khác biệt lớn nhất. C++ RecordPage ghi `set_modified(0, nullopt)` cho mọi write -> **vi phạm WAL protocol**. Rust RecordPage qua Transaction nên WAL, locking, recovery đều đúng.
-
-2. **Error handling nhất quán** - Mọi I/O operation trong Rust trả `Result`. C++:
-   - `FileMgr::read()` silent return khi file chưa có
-   - `Buffer::flush()` trả void nhưng bên trong có thể throw
-   - `BufferMgr::flush_all()` trả void nhưng buffer.flush() có thể throw
-
-3. **API safety** - `Page::get_bytes()` trả raw pointer (C++) vs slice (Rust). `pub(in crate::buffer)` vs comment "package-private".
-
-4. **LogIterator implement Iterator trait** - Rust LogIterator dùng được với standard combinators. C++ phải viết while loop.
-
-5. **Error type hierarchy** - `AbortError{Time, IO, General}` phân biệt nguyên nhân. C++ chỉ có 1 string message.
-
-### 5.3 Tương Đương
-
-1. **Core algorithms** - Backward-growing WAL, pin/unpin protocol, slot-based record storage, sequential table scan - logic giống hệt nhau.
-
-2. **Data encoding** - Big-endian integers, `[4-byte length][data]` format cho strings.
-
-3. **Eviction strategy** - Cả hai dùng naive "first unpinned" scan.
+| Component | C++ | Rust | Winner |
+|-----------|-----|------|--------|
+| Index interface | Virtual base | enum_dispatch | **Rust** (zero-cost) |
+| HashIndex | Tuong duong | Tuong duong | **Hoa** |
+| BTreeIndex | Exceptions | Result propagation | **Rust** (explicit) |
+| IndexSelectScan | unique_ptr | Owned structs | **Hoa** |
+| IndexJoinScan | unique_ptr | Box<Scan> | **Hoa** |
+| StatMgr thread safety | No mutex | Arc<Mutex<>> | **Rust** |
+| MultibufferProductScan | Direct loop | ProductScan delegate | **C++** (simpler) |
+| BufferNeeds | Integer math | Float math | **C++** (efficient) |
 
 ---
 
-## 6. Các Vấn Đề Cụ Thể Cần Lưu Ý
+## 8. Layer 8: API & Network
 
-### 6.1 WAL Violation trong C++ RecordPage
+### 8.1 Connection Abstraction
 
+**C++ - Virtual Inheritance:**
 ```cpp
-// recordpage.cpp:21 - HARDCODED, không có actual logging
-buff_.set_modified(0, std::nullopt);
+class Connection {
+public:
+    virtual std::unique_ptr<Statement> create_statement() = 0;
+    virtual void close() = 0;
+    virtual void commit() = 0;
+    virtual void rollback() = 0;
+};
+
+class EmbeddedConnection : public Connection { /* ... */ };
+class NetworkConnection : public Connection { /* STUB */ };
 ```
 
-Khi Phase 5 implement Transaction, mọi call site `set_modified(0, nullopt)` phải đổi thành actual txnum + LSN từ log record. Hiện có **6 chỗ** trong `recordpage.cpp` cần sửa.
+**Rust - Trait + Enum:**
+```rust
+pub trait ConnectionControl {
+    fn close(&mut self) -> Result<(), SQLError>;
+    fn commit(&mut self) -> Result<(), SQLError>;
+    fn rollback(&mut self) -> Result<(), SQLError>;
+}
 
-### 6.2 Silent Failure trong C++ FileMgr::read()
+pub enum Connection {
+    Embedded(Arc<Mutex<EmbeddedConnection>>),
+    Network(Arc<Mutex<NetworkConnection>>),   // FULL IMPLEMENTATION
+}
+```
 
+### 8.2 Statement & ResultSet
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| execute_query return | `unique_ptr<ResultSet>` | `Result<ResultSet, SQLError>` |
+| execute_update return | `size_t` (throw on error) | `Result<usize, SQLError>` |
+| ResultSet::next | `bool` (try-catch internally) | `Result<bool, SQLError>` |
+| Field name handling | Lowercase conversion | Lowercase conversion |
+| Auto-rollback | On exception | On error |
+
+### 8.3 Metadata Interface
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| Const correctness | All methods `const` | Methods take `&mut self` (khong can thiet) |
+| Null handling | Checks for null schema | Assumes valid |
+| Column indexing | 1-indexed (JDBC-style) | 1-indexed (same) |
+
+**C++ tot hon** ve const correctness cho Metadata - read-only operations nen la `const`.
+
+### 8.4 Network Server - **KHAC BIET LON NHAT**
+
+| Tieu chi | C++ | Rust |
+|----------|-----|------|
+| Protocol | **KHONG CO** (chi co facade) | gRPC voi Protobuf |
+| Server | `SimpleDBServer` wrapper class | 4 gRPC services (Connection, Statement, ResultSet, MetaData) |
+| Client | `NetworkConnection` **STUB** | Full gRPC client voi Tokio |
+| Async model | Synchronous | Async/await voi Tokio runtime |
+| Transport | Khong co | HTTP/2 qua Tonic |
+| State management | HashMap<id, ResultSet> | Per-connection state |
+
+**C++ SimpleDBServer Architecture:**
 ```cpp
-// filemgr.cpp:66-69
-if (!fs::exists(filepath)) {
-    return;  // Page giữ zeros, caller không biết file chưa tồn tại
+class SimpleDBServer {
+    SimpleDB db_;
+    std::shared_ptr<EmbeddedConnection> conn_;
+    std::mutex mutex_;
+    std::unordered_map<uint64_t, std::unique_ptr<ResultSetHolder>> result_sets_;
+    // ID-based API: execute_query returns uint64_t id
+    // Client calls get_int(id, fldname), next(id), etc.
+};
+```
+
+C++ co thiet ke tot cho network API (ID-based result set management), nhung chua implement transport layer nao.
+
+**Rust gRPC Protocol:**
+```protobuf
+service Connection {
+    rpc Close (CloseConnectionRequest) returns (CloseConnectionReply) {}
+    rpc Commit (CommitRequest) returns (CommitReply) {}
+    rpc Rollback (RollbackRequest) returns (RollbackReply) {}
 }
-```
-
-Trong Rust, nếu file chưa tồn tại, `get_file()` sẽ tạo file mới (do flag `create(true)`), rồi `read_exact` sẽ đọc zeros. Khác biệt nhỏ nhưng behavior rõ ràng hơn.
-
-### 6.3 Rust RecordPage - Excessive Locking
-
-```rust
-// Mỗi get/set đều lock Transaction
-pub fn get_int(&mut self, slot: usize, fldname: &str) -> Result<i32, TransactionError> {
-    self.tx.lock().unwrap().get_int(&self.blk, fldpos)  // Lock mỗi field access
+service Statement {
+    rpc ExecuteQuery (ExecuteQueryRequest) returns (ExecuteQueryReply) {}
+    rpc ExecuteUpdate (ExecuteUpdateRequest) returns (ExecuteUpdateReply) {}
 }
+service ResultSet { /* Next, GetInt, GetString, Close */ }
+service MetaData { /* GetColumnCount, GetColumnName, GetColumnType, GetColumnDisplaySize */ }
 ```
 
-Với bảng có 5 fields, đọc 1 row = 5 lần `lock().unwrap()`. Đây là overhead. C++ không có overhead này (truy cập trực tiếp buffer).
+Rust co full client/server implementation voi async I/O.
 
-### 6.4 Rust LogIterator - Swallowed Error
+### Danh Gia Layer API/Network
 
-```rust
-// logiterator.rs - .ok() bỏ qua lỗi
-self.move_to_block(&self.blk.clone()).ok();  // Error silently ignored
-```
-
-`Iterator::next()` trả `Option<T>`, không có chỗ cho `Error`. Khi `move_to_block` fail (I/O error), lỗi bị `.ok()` nuốt mất. Đây là design limitation của standard Iterator trait.
+| Component | C++ | Rust | Winner |
+|-----------|-----|------|--------|
+| Connection design | Virtual inheritance | Tagged enum | **Rust** |
+| Error handling | Exceptions | Result<T, SQLError> | **Rust** |
+| Thread safety | No protection | Arc<Mutex<>> | **Rust** |
+| Network protocol | **Khong co** | gRPC/Protobuf | **Rust** (by far) |
+| Async support | Synchronous | Tokio async | **Rust** |
+| Metadata const | `const` methods | `&mut self` | **C++** |
+| Server architecture | Good facade design | Service-oriented | **Rust** |
 
 ---
 
-## 7. Bảng Tổng Kết
+## 9. Tong Ket
 
-| Layer | Component | C++ Quality | Rust Quality | Winner | Lý do |
-|-------|-----------|-------------|-------------|--------|-------|
-| File | BlockId | ★★★★ | ★★★★ | Tie | Cùng chức năng |
-| File | Page | ★★★★ | ★★★★½ | Rust | Slice > raw pointer |
-| File | FileMgr | ★★★★½ | ★★★★ | **C++** | Mutex + cache |
-| Log | LogMgr | ★★★★ | ★★★★½ | Rust | Constructor init + error |
-| Log | LogIterator | ★★★½ | ★★★★ | Rust | Standard Iterator trait |
-| Buffer | Buffer | ★★★½ | ★★★★ | Rust | Mutex LogMgr, visibility |
-| Buffer | BufferMgr | ★★★★ | ★★★★ | Tie | Cùng logic, error type Rust tốt hơn nhưng cả hai wait chưa optimal |
-| Record | Schema/Layout | ★★★★ | ★★★★ | Tie | Gần giống nhau |
-| Record | RecordPage | ★★★ | ★★★★½ | **Rust** | WAL-compliant qua Transaction |
-| Record | TableScan | ★★★★ | ★★★½ | **C++** | Readability, clean flow |
+### 9.1 Bang Tong Ket Toan Bo
 
-**Tổng:** C++ thắng 2, Rust thắng 4, Hòa 4.
+| Layer | Component | C++ | Rust | Winner | Ly do chinh |
+|-------|-----------|-----|------|--------|-------------|
+| **File** | BlockId | ---- | ---- | Hoa | Cung chuc nang |
+| | Page | ---+ | ----+ | Rust | Slice > raw pointer |
+| | FileMgr | ----+ | ---- | **C++** | Mutex + file size cache |
+| **Log** | LogMgr | ---- | ----+ | Rust | Constructor init + error |
+| | LogIterator | ---+ | ---- | Rust | Standard Iterator trait |
+| **Buffer** | Buffer | ---+ | ---- | Rust | Mutex LogMgr, visibility |
+| | BufferMgr | ---- | ---- | Hoa | Ca hai wait chua optimal |
+| **Record** | Schema/Layout | ---- | ---- | Hoa | Gan giong nhau |
+| | RecordPage | --- | ----+ | Rust | WAL-compliant qua Transaction |
+| | TableScan | ---- | ---+ | **C++** | Readability, clean flow |
+| **Transaction** | Transaction | ---+ | ---- | Rust | Error types, thread safety |
+| | Recovery | ---- | ---- | Hoa | WAL protocol identical |
+| | Concurrency | ---- | ---- | Hoa | Same algorithm, same bug |
+| | BufferList | ---- | ----+ | Rust | Visibility, error handling |
+| **Query** | Scan interface | ---+ | ----+ | Rust | Zero-cost enum dispatch |
+| | Constant | ----+ | --- | **C++** | variant > dual Option |
+| | Parser | ---- | ----+ | Rust | Result-based errors |
+| | Plan interface | ----+ | ---+ | **C++** | Simpler scan ownership |
+| | Optimizer | --- | ----+ | **Rust** | 4 vs 2 planners |
+| **Index** | Hash/BTree | ---- | ----+ | Rust | Explicit error propagation |
+| | Index Scans | ---- | ---- | Hoa | Same logic |
+| | Metadata Mgrs | ---- | ----+ | Rust | StatMgr thread safety |
+| | MultibufferProduct | ----+ | --- | **C++** | Direct loop, no wrapper |
+| **API** | Connection/Statement | ---+ | ----+ | Rust | Type safety, error handling |
+| | Network | - | ----+ | **Rust** | gRPC vs khong co |
+| | Metadata | ----+ | --- | **C++** | Const correctness |
 
-Rust thắng chủ yếu ở **correctness** (error handling, WAL compliance). C++ thắng ở **pragmatics** (thread safety cho FileMgr, readability cho TableScan).
+### 9.2 Thong Ke
+
+| | C++ thang | Rust thang | Hoa |
+|---|----------|-----------|-----|
+| So luong | **6** | **13** | **8** |
+
+### 9.3 C++ Tot Hon O Dau
+
+1. **FileMgr** - mutex + file size cache (Rust khong co ca hai)
+2. **TableScan readability** - code ngan gon, logic flow truc quan
+3. **Constant type** - `std::variant` hieu qua hon dual `Option`
+4. **Plan ownership** - `unique_ptr<Scan>` don gian hon `Arc<Mutex<Scan>>`
+5. **MultibufferProductScan** - nested loop truc tiep, khong can wrapper
+6. **Metadata const correctness** - read-only methods dung `const`
+
+### 9.4 Rust Tot Hon O Dau
+
+1. **Error handling nhat quan** - Moi I/O operation tra `Result`. C++ mix giua void/throw/silent return
+2. **Thread safety compiler-enforced** - `Arc<Mutex<>>` bat buoc lock. C++ co the quen
+3. **Network implementation** - Full gRPC client/server voi async. C++ chi co stub
+4. **Zero-cost enum dispatch** - Scan/Plan/Index deu dung enum_dispatch, khong co vtable overhead
+5. **Optimizer completeness** - 4 query planners vs 2
+6. **Visibility enforcement** - `pub(in crate::module)` vs comment "package-private"
+7. **WAL compliance** (Layer 4) - RecordPage qua Transaction, C++ hardcode `set_modified(0, nullopt)`
+
+### 9.5 Tuong Duong
+
+1. **Core algorithms** - WAL protocol, B-Tree split/merge, hash bucketing, lock protocol, eviction strategy
+2. **Data encoding** - Big-endian integers, `[4-byte length][data]` strings
+3. **Schema design** - Same catalog tables (tblcat, fldcat, viewcat, idxcat)
+4. **Recovery** - Same 6 log record types, same undo-only recovery
+
+### 9.6 Bugs Chung
+
+| Bug | C++ | Rust |
+|-----|-----|------|
+| Lock upgrade khong ghi len global lock table | Co | Co |
+| Lock type dung String thay vi enum | Co | Co |
+| Khong co lock fairness / starvation prevention | Co | Co |
+| LogIterator nuot I/O error | N/A (throw) | Co (`.ok()`) |
+
+### 9.7 Ket Luan Tong The
+
+**Rust (NMDB2) thang tong the** voi 13/27 components, chu yeu nho:
+- **Correctness**: Error handling nhat quan, WAL compliance, thread safety
+- **Completeness**: Network layer day du, nhieu optimizer hon
+- **Safety**: Compiler-enforced thread safety, no null pointer, no data race
+
+**C++ (MudopDB_v1) thang o pragmatics** voi 6/27 components:
+- **Simplicity**: Ownership model don gian hon (unique_ptr vs Arc<Mutex<>>)
+- **Performance**: File cache, integer math, direct nested loop
+- **Readability**: Less verbose, familiar OOP patterns
+
+**Trade-off co ban:** Rust doi code verbose hon (Result wrapping, borrow checker gymnastics) de lay compiler-enforced safety. C++ doi manual discipline de lay simplicity va familiarity. Cho database system can correctness va concurrency, Rust la lua chon tot hon cho production.
 
 ---
 
-**Phiên bản tài liệu:** 2.0 - Focused on completed layers only
-**Ngày tạo:** 7 tháng 2, 2026
+**Phien ban tai lieu:** 3.0 - Full review toan bo 8 layers
+**Ngay tao:** 8 thang 2, 2026
