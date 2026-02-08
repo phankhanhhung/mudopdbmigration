@@ -128,16 +128,16 @@ C++ polling 100ms gay overhead. Rust `park_timeout` hieu qua hon. Tuy nhien ca h
 
 **Gan nhu tuong duong hoan toan.** Cung data structures, cung logic.
 
-### 4.2 RecordPage - **Khac biet kien truc lon nhat cua Layer 1-4**
+### 4.2 RecordPage - ✅ DA FIX (Phase 5)
 
-| He qua | C++ (Direct Buffer) | Rust (Via Transaction) |
-|---------|---------------------|------------------------|
-| WAL logging khi write | **Khong** (hardcode `txnum=0, lsn=nullopt`) | Co (Transaction write log truoc data) |
-| Concurrency control | Khong | Transaction acquire S/X lock |
-| Crash recovery | Khong the rollback | Transaction rollback undo changes |
-| set_modified marker | Hardcode `(0, nullopt)` | Actual txnum + LSN tu log |
+| He qua | C++ (Via Transaction) | Rust (Via Transaction) |
+|---------|------------------------|------------------------|
+| WAL logging khi write | ✅ Co (Transaction write log truoc data) | Co (Transaction write log truoc data) |
+| Concurrency control | ✅ Co (Transaction acquire S/X lock) | Co (Transaction acquire S/X lock) |
+| Crash recovery | ✅ Co (Transaction rollback undo changes) | Co (Transaction rollback undo changes) |
+| set_modified marker | ✅ Actual txnum + LSN tu log | Actual txnum + LSN tu log |
 
-**Luu y:** C++ RecordPage da duoc cap nhat trong Phase 5 de goi qua Transaction, khac phuc van de WAL violation.
+**Da fix tu Phase 5.** C++ RecordPage goi qua Transaction cho moi read/write. Verified voi 12 WAL compliance tests (test_wal.cpp).
 
 ### 4.3 TableScan
 
@@ -636,13 +636,13 @@ Rust co full client/server implementation voi async I/O.
 
 ### 9.4 Rust Tot Hon O Dau
 
-1. **Error handling nhat quan** - Moi I/O operation tra `Result`. C++ mix giua void/throw/silent return
+1. ~~**Error handling nhat quan**~~ ✅ DA FIX: DbResult<T> error handling (commit b7aaa20)
 2. **Thread safety compiler-enforced** - `Arc<Mutex<>>` bat buoc lock. C++ co the quen
-3. **Network implementation** - Full gRPC client/server voi async. C++ chi co stub
-4. **Zero-cost enum dispatch** - Scan/Plan/Index deu dung enum_dispatch, khong co vtable overhead
+3. ~~**Network implementation**~~ ✅ DA FIX: TCP transport voi binary protocol (commit 99ed9d6)
+4. **Zero-cost enum dispatch** - Scan/Plan/Index deu dung enum_dispatch, khong co vtable overhead (inherent C++ vtable)
 5. **Optimizer completeness** - 4 query planners vs 2
 6. **Visibility enforcement** - `pub(in crate::module)` vs comment "package-private"
-7. **WAL compliance** (Layer 4) - RecordPage qua Transaction, C++ hardcode `set_modified(0, nullopt)`
+7. ~~**WAL compliance**~~ ✅ DA FIX TU Phase 5: RecordPage da goi qua Transaction. Verified voi 12 WAL tests
 
 ### 9.5 Tuong Duong
 
@@ -656,16 +656,18 @@ Rust co full client/server implementation voi async I/O.
 | Bug | C++ | Rust |
 |-----|-----|------|
 | Lock upgrade khong ghi len global lock table | Co | Co |
-| Lock type dung String thay vi enum | Co | Co |
-| Khong co lock fairness / starvation prevention | Co | Co |
+| ~~Lock type dung String thay vi enum~~ | ✅ C++ fixed (LockType enum) | Co |
+| ~~Khong co lock fairness / starvation prevention~~ | ✅ C++ fixed (condition_variable) | Co |
 | LogIterator nuot I/O error | N/A (throw) | Co (`.ok()`) |
 
 ### 9.7 Ket Luan Tong The
 
-**Rust (NMDB2) thang tong the** voi 13/27 components, chu yeu nho:
-- **Correctness**: Error handling nhat quan, WAL compliance, thread safety
-- **Completeness**: Network layer day du, nhieu optimizer hon
-- **Safety**: Compiler-enforced thread safety, no null pointer, no data race
+**Rust (NMDB2) thang tong the** voi 13/27 components, nhung C++ da thu hep khoang cach:
+- ~~Error handling~~ ✅ C++ da co DbResult<T>
+- ~~Network layer~~ ✅ C++ da co TCP transport
+- ~~WAL compliance~~ ✅ C++ da fix tu Phase 5
+- ~~Lock fairness~~ ✅ C++ da co condition_variable
+- **Con lai Rust hon**: Thread safety (compiler-enforced), enum dispatch (zero-cost), optimizer completeness (4 vs 2), visibility enforcement
 
 **C++ (MudopDB_v1) thang o pragmatics** voi 6/27 components:
 - **Simplicity**: Ownership model don gian hon (unique_ptr vs Arc<Mutex<>>)

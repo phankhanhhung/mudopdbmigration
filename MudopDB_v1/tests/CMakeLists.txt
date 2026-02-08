@@ -28,6 +28,7 @@ add_executable(tests
   test_recordpage.cpp
   test_tablescan.cpp
   test_network.cpp
+  test_wal.cpp
 )
 target_link_libraries(tests PRIVATE gtest_main mudop_utils)
 target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
