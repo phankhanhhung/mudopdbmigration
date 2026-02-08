@@ -92,26 +92,12 @@ TEST(EmbeddedConnection, MultipleStatements) {
 }
 
 // ============================================================================
-// Test NetworkConnection (basic functionality)
+// Test NetworkConnection (requires server - connection failure expected)
 // ============================================================================
 
-TEST(NetworkConnection, CreateStatement) {
-  auto conn = std::make_unique<NetworkConnection>();
-  auto stmt = conn->create_statement();
-  EXPECT_NE(stmt, nullptr);
-}
-
-TEST(NetworkConnection, Close) {
-  auto conn = std::make_unique<NetworkConnection>();
-  EXPECT_NO_THROW(conn->close());
-}
-
-TEST(NetworkConnection, CommitNoThrow) {
-  auto conn = std::make_unique<NetworkConnection>();
-  EXPECT_NO_THROW(conn->commit());
-}
-
-TEST(NetworkConnection, RollbackNoThrow) {
-  auto conn = std::make_unique<NetworkConnection>();
-  EXPECT_NO_THROW(conn->rollback());
+TEST(NetworkConnection, ConnectFailsWhenNoServer) {
+  EXPECT_THROW(
+    NetworkConnection("127.0.0.1", 19999),
+    std::runtime_error
+  );
 }

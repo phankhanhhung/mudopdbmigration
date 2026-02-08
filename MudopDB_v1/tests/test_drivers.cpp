@@ -15,11 +15,8 @@ TEST(Drivers, EmbeddedConnectCreatesStatementAndCloses) {
   EXPECT_NO_THROW(conn->close());
 }
 
-TEST(Drivers, NetworkConnectCreatesStatementAndCloses) {
+TEST(Drivers, NetworkConnectFailsWhenNoServer) {
   NetworkDriver d;
-  auto conn = d.connect("tcp://localhost:9999");
-  ASSERT_NE(conn, nullptr);
-  auto stmt = conn->create_statement();
-  EXPECT_NE(stmt, nullptr);
-  EXPECT_NO_THROW(conn->close());
+  // No server running - connection should fail
+  EXPECT_THROW(d.connect("127.0.0.1:19999"), std::runtime_error);
 }

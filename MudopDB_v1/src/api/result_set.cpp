@@ -1,6 +1,8 @@
 #include "api/result_set.hpp"
 #include "api/metadata.hpp"
 #include "api/connection.hpp"
+#include "server/tcp_transport.hpp"
+#include "server/protocol.hpp"
 #include "plan/plan.hpp"
 #include "query/scan.hpp"
 #include "record/schema.hpp"
@@ -78,19 +80,61 @@ void EmbeddedResultSet::close() {
 }
 
 // ============================================================================
-// NetworkResultSet (stub)
+// NetworkResultSet
 // ============================================================================
 
-NetworkResultSet::NetworkResultSet(std::shared_ptr<NetworkConnection>, int64_t) {}
+NetworkResultSet::NetworkResultSet(std::shared_ptr<NetworkConnection> conn, uint64_t id)
+    : conn_(std::move(conn)), id_(id) {}
 
-bool NetworkResultSet::next() { return false; }
-
-int32_t NetworkResultSet::get_int(const std::string&) { return 0; }
-
-std::string NetworkResultSet::get_string(const std::string&) { return {}; }
-
-std::unique_ptr<Metadata> NetworkResultSet::get_meta_data() const {
-    return std::make_unique<NetworkMetadata>(std::shared_ptr<NetworkConnection>{}, 0);
+bool NetworkResultSet::next() {
+    protocol::Buffer req;
+    req.write_uint8(static_cast<uint8_t>(protocol::MsgType::RS_NEXT));
+    req.write_uint64(id_);
+    auto resp = conn_->channel()->rpc(req);
+    auto status = static_cast<protocol::Status>(resp.read_uint8());
+    if (status == protocol::Status::ERROR) {
+        throw std::runtime_error(resp.read_string());
+    }
+    return resp.read_bool();
 }
 
-void NetworkResultSet::close() {}
+int32_t NetworkResultSet::get_int(const std::string& fldname) {
+    protocol::Buffer req;
+    req.write_uint8(static_cast<uint8_t>(protocol::MsgType::RS_GET_INT));
+    req.write_uint64(id_);
+    req.write_string(fldname);
+    auto resp = conn_->channel()->rpc(req);
+    auto status = static_cast<protocol::Status>(resp.read_uint8());
+    if (status == protocol::Status::ERROR) {
+        throw std::runtime_error(resp.read_string());
+    }
+    return resp.read_int32();
+}
+
+std::string NetworkResultSet::get_string(const std::string& fldname) {
+    protocol::Buffer req;
+    req.write_uint8(static_cast<uint8_t>(protocol::MsgType::RS_GET_STRING));
+    req.write_uint64(id_);
+    req.write_string(fldname);
+    auto resp = conn_->channel()->rpc(req);
+    auto status = static_cast<protocol::Status>(resp.read_uint8());
+    if (status == protocol::Status::ERROR) {
+        throw std::runtime_error(resp.read_string());
+    }
+    return resp.read_string();
+}
+
+std::unique_ptr<Metadata> NetworkResultSet::get_meta_data() const {
+    return std::make_unique<NetworkMetadata>(conn_, id_);
+}
+
+void NetworkResultSet::close() {
+    protocol::Buffer req;
+    req.write_uint8(static_cast<uint8_t>(protocol::MsgType::RS_CLOSE));
+    req.write_uint64(id_);
+    auto resp = conn_->channel()->rpc(req);
+    auto status = static_cast<protocol::Status>(resp.read_uint8());
+    if (status == protocol::Status::ERROR) {
+        throw std::runtime_error(resp.read_string());
+    }
+}

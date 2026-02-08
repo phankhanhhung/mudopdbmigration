@@ -29,6 +29,7 @@ namespace server {
 class SimpleDBServer {
 public:
     explicit SimpleDBServer(const std::string& dbname);
+    ~SimpleDBServer();
 
     // Connection operations
     void commit();

@@ -3,7 +3,7 @@
 #include "app/app.hpp"
 
 TEST(App, QuitImmediately) {
-  AppConfig cfg{.connection_string = "mem://test"};
+  AppConfig cfg{.connection_string = "testdb_app"};
   std::istringstream in("quit\n");
   std::ostringstream out;
   int rc = run_app(cfg, in, out);

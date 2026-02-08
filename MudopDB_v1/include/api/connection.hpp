@@ -1,10 +1,13 @@
 #ifndef CONNECTION_HPP
 #define CONNECTION_HPP
 
+#include <cstdint>
 #include <memory>
+#include <string>
 
 namespace server { class SimpleDB; }
 namespace tx { class Transaction; }
+namespace transport { class TcpChannel; }
 class Planner;
 class Statement;
 
@@ -45,14 +48,24 @@ private:
 };
 
 /**
- * Network database connection (stub).
+ * Network database connection.
+ * Connects to a remote SimpleDBServer via TCP.
+ * Corresponds to NetworkConnection in Rust (NMDB2/src/api/network/networkconnection.rs)
  */
 class NetworkConnection : public Connection {
 public:
+    NetworkConnection(const std::string& host, uint16_t port);
+    ~NetworkConnection() override = default;
+
     std::unique_ptr<Statement> create_statement() override;
     void close() override;
     void commit() override;
     void rollback() override;
+
+    std::shared_ptr<transport::TcpChannel> channel() const { return channel_; }
+
+private:
+    std::shared_ptr<transport::TcpChannel> channel_;
 };
 
 #endif // CONNECTION_HPP

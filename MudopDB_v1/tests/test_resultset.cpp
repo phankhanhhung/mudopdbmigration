@@ -97,47 +97,6 @@ TEST(ResultSet, PolymorphicUsage) {
 }
 
 // ============================================================================
-// Test NetworkResultSet (basic functionality)
-// ============================================================================
-
-TEST(NetworkResultSet, Create) {
-  auto conn = std::make_shared<NetworkConnection>();
-  auto rs = std::make_unique<NetworkResultSet>(conn, 123);
-  EXPECT_NE(rs, nullptr);
-}
-
-TEST(NetworkResultSet, NextReturnsFalse) {
-  auto conn = std::make_shared<NetworkConnection>();
-  auto rs = std::make_unique<NetworkResultSet>(conn, 123);
-  EXPECT_FALSE(rs->next());
-}
-
-TEST(NetworkResultSet, GetIntReturnsZero) {
-  auto conn = std::make_shared<NetworkConnection>();
-  auto rs = std::make_unique<NetworkResultSet>(conn, 123);
-  EXPECT_EQ(rs->get_int("id"), 0);
-}
-
-TEST(NetworkResultSet, GetStringReturnsEmpty) {
-  auto conn = std::make_shared<NetworkConnection>();
-  auto rs = std::make_unique<NetworkResultSet>(conn, 123);
-  EXPECT_EQ(rs->get_string("name"), "");
-}
-
-TEST(NetworkResultSet, GetMetaData) {
-  auto conn = std::make_shared<NetworkConnection>();
-  auto rs = std::make_unique<NetworkResultSet>(conn, 123);
-  auto metadata = rs->get_meta_data();
-  EXPECT_NE(metadata, nullptr);
-}
-
-TEST(NetworkResultSet, Close) {
-  auto conn = std::make_shared<NetworkConnection>();
-  auto rs = std::make_unique<NetworkResultSet>(conn, 123);
-  EXPECT_NO_THROW(rs->close());
-}
-
-// ============================================================================
 // Test error handling with exceptions
 // ============================================================================
 

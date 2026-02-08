@@ -49,17 +49,22 @@ private:
 };
 
 /**
- * Network result set (stub).
+ * Network result set.
+ * Corresponds to NetworkResultSet in Rust (NMDB2/src/api/network/networkresultset.rs)
  */
 class NetworkResultSet : public ResultSet {
 public:
-    NetworkResultSet(std::shared_ptr<NetworkConnection> conn, int64_t id);
+    NetworkResultSet(std::shared_ptr<NetworkConnection> conn, uint64_t id);
 
     bool next() override;
     int32_t get_int(const std::string& fldname) override;
     std::string get_string(const std::string& fldname) override;
     std::unique_ptr<Metadata> get_meta_data() const override;
     void close() override;
+
+private:
+    std::shared_ptr<NetworkConnection> conn_;
+    uint64_t id_;
 };
 
 #endif // RESULT_SET_HPP

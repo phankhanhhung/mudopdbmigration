@@ -1,6 +1,8 @@
 #include "api/connection.hpp"
 #include "api/statement.hpp"
 #include "server/simpledb.hpp"
+#include "server/tcp_transport.hpp"
+#include "server/protocol.hpp"
 #include "tx/transaction.hpp"
 #include "plan/planner.hpp"
 #include <memory>
@@ -53,8 +55,13 @@ std::shared_ptr<Planner> EmbeddedConnection::planner() {
 }
 
 // ============================================================================
-// NetworkConnection (stub)
+// NetworkConnection
 // ============================================================================
+
+NetworkConnection::NetworkConnection(const std::string& host, uint16_t port) {
+    int fd = transport::tcp_connect(host, port);
+    channel_ = std::make_shared<transport::TcpChannel>(fd);
+}
 
 std::unique_ptr<Statement> NetworkConnection::create_statement() {
     return std::make_unique<NetworkStatement>(
@@ -62,6 +69,32 @@ std::unique_ptr<Statement> NetworkConnection::create_statement() {
     );
 }
 
-void NetworkConnection::close() {}
-void NetworkConnection::commit() {}
-void NetworkConnection::rollback() {}
+void NetworkConnection::close() {
+    protocol::Buffer req;
+    req.write_uint8(static_cast<uint8_t>(protocol::MsgType::CONN_CLOSE));
+    auto resp = channel_->rpc(req);
+    auto status = static_cast<protocol::Status>(resp.read_uint8());
+    if (status == protocol::Status::ERROR) {
+        throw std::runtime_error(resp.read_string());
+    }
+}
+
+void NetworkConnection::commit() {
+    protocol::Buffer req;
+    req.write_uint8(static_cast<uint8_t>(protocol::MsgType::CONN_COMMIT));
+    auto resp = channel_->rpc(req);
+    auto status = static_cast<protocol::Status>(resp.read_uint8());
+    if (status == protocol::Status::ERROR) {
+        throw std::runtime_error(resp.read_string());
+    }
+}
+
+void NetworkConnection::rollback() {
+    protocol::Buffer req;
+    req.write_uint8(static_cast<uint8_t>(protocol::MsgType::CONN_ROLLBACK));
+    auto resp = channel_->rpc(req);
+    auto status = static_cast<protocol::Status>(resp.read_uint8());
+    if (status == protocol::Status::ERROR) {
+        throw std::runtime_error(resp.read_string());
+    }
+}

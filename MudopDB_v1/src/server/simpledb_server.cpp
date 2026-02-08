@@ -21,6 +21,8 @@ private:
     std::unique_ptr<ResultSet> rs_;
 };
 
+SimpleDBServer::~SimpleDBServer() = default;
+
 SimpleDBServer::SimpleDBServer(const std::string& dbname)
     : db_(dbname) {
     auto db_ptr = std::make_shared<SimpleDB>(dbname);

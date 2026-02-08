@@ -5,7 +5,7 @@
 #include "app/app.hpp"
 
 TEST(AppFlow, HandlesQuit) {
-  AppConfig cfg{.connection_string = "mem://test"};
+  AppConfig cfg{.connection_string = "testdb_appflow"};
   std::istringstream in("quit\n");
   std::ostringstream out;
   int rc = run_app(cfg, in, out);
@@ -22,11 +22,14 @@ static std::string capture(std::function<int()> fn) {
 }
 
 TEST(AppFlow, RoutesQueryAndUpdate) {
-  AppConfig cfg{.connection_string = "mem://test"};
-  std::istringstream in("select x\nupdate y\nquit\n");
+  AppConfig cfg{.connection_string = "testdb_appflow2"};
+  std::istringstream in(
+      "create table testflow (a int)\n"
+      "select a from testflow\n"
+      "quit\n");
   std::ostringstream out;
   auto s = capture([&]{ return run_app(cfg, in, out); });
   // run_app writes prompts to 'out' and messages to std::cout, so we assert on captured stdout here.
-  EXPECT_NE(s.find("Executing query: select x"), std::string::npos);
-  EXPECT_NE(s.find("Executing update: update y"), std::string::npos);
+  EXPECT_NE(s.find("Executing query: select a from testflow"), std::string::npos);
+  EXPECT_NE(s.find("Executing update: create table testflow"), std::string::npos);
 }
