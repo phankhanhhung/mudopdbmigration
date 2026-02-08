@@ -26,8 +26,8 @@ namespace log {
  *
  * Corresponds to LogMgr in Rust (NMDB2/src/log/logmgr.rs)
  *
- * Thread Safety: This class is NOT thread-safe. Callers must
- * synchronize access (typically via mutex in Transaction layer).
+ * Thread Safety: This class is thread-safe. All public methods
+ * are protected by an internal mutex.
  */
 class LogMgr {
 public:
@@ -85,6 +85,8 @@ private:
      * Writes the current log page to disk.
      */
     void flush_impl();
+
+    mutable std::mutex mutex_;  // Protects all log state
 
     /**
      * Helper function to append a new block and format it.

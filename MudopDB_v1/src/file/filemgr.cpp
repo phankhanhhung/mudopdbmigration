@@ -116,8 +116,8 @@ void FileMgr::write(const BlockId& blk, Page& page) {
 BlockId FileMgr::append(const std::string& filename) {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    // Get current file size
-    size_t new_blknum = length(filename);
+    // Get current file size (already holding mutex, use impl)
+    size_t new_blknum = length_impl(filename);
 
     BlockId blk(filename, static_cast<int32_t>(new_blknum));
 
@@ -146,6 +146,11 @@ BlockId FileMgr::append(const std::string& filename) {
 }
 
 size_t FileMgr::length(const std::string& filename) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return length_impl(filename);
+}
+
+size_t FileMgr::length_impl(const std::string& filename) {
     // Check cache first
     auto it = open_files_.find(filename);
     if (it != open_files_.end()) {

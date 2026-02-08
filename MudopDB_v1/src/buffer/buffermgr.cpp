@@ -15,10 +15,12 @@ BufferMgr::BufferMgr(std::shared_ptr<file::FileMgr> fm,
 }
 
 size_t BufferMgr::available() const {
+    std::lock_guard<std::mutex> lock(mutex_);
     return num_available_;
 }
 
 void BufferMgr::flush_all(size_t txnum) {
+    std::lock_guard<std::mutex> lock(mutex_);
     for (auto& buff : bufferpool_) {
         auto tx = buff.modifying_tx();
         if (tx.has_value() && tx.value() == txnum) {
@@ -28,13 +30,14 @@ void BufferMgr::flush_all(size_t txnum) {
 }
 
 size_t BufferMgr::pin(const file::BlockId& blk) {
+    std::unique_lock<std::mutex> lock(mutex_);
     auto start_time = std::chrono::steady_clock::now();
 
     std::optional<size_t> idx = try_to_pin(blk);
 
-    // Wait loop if pool is full
+    // Wait on condition variable instead of busy-polling
     while (!idx.has_value() && !waiting_too_long(start_time)) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        cv_.wait_for(lock, std::chrono::milliseconds(max_time_));
         idx = try_to_pin(blk);
     }
 
@@ -46,16 +49,18 @@ size_t BufferMgr::pin(const file::BlockId& blk) {
 }
 
 void BufferMgr::unpin(size_t idx) {
+    std::lock_guard<std::mutex> lock(mutex_);
     Buffer& buff = bufferpool_[idx];
     buff.unpin();
 
     if (!buff.is_pinned()) {
         num_available_++;
-        // In multi-threaded version, would notify waiting threads here
+        cv_.notify_all();  // Wake up threads waiting for a buffer
     }
 }
 
 Buffer& BufferMgr::buffer(size_t idx) {
+    // No lock: caller holds a pin on this buffer
     return bufferpool_[idx];
 }
 

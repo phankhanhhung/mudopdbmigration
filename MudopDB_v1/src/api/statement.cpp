@@ -24,10 +24,13 @@ std::unique_ptr<ResultSet> EmbeddedStatement::execute_query(const std::string& q
             if (plan) {
                 return std::make_unique<EmbeddedResultSet>(plan, conn_);
             }
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            conn_->rollback();
+            throw std::runtime_error(std::string("execute_query: ") + e.what());
+        }
     }
     conn_->rollback();
-    throw std::runtime_error("EmbeddedStatement: execute_query failed");
+    throw std::runtime_error("EmbeddedStatement: execute_query failed - no planner");
 }
 
 size_t EmbeddedStatement::execute_update(const std::string& cmd) {
@@ -38,10 +41,13 @@ size_t EmbeddedStatement::execute_update(const std::string& cmd) {
             size_t result = p->execute_update(cmd, tx);
             conn_->commit();
             return result;
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            conn_->rollback();
+            throw std::runtime_error(std::string("execute_update: ") + e.what());
+        }
     }
     conn_->rollback();
-    throw std::runtime_error("EmbeddedStatement: execute_update failed");
+    throw std::runtime_error("EmbeddedStatement: execute_update failed - no planner");
 }
 
 // ============================================================================

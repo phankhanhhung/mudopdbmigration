@@ -30,13 +30,13 @@ TEST(EmbeddedResultSet, NextWithNoScan) {
 TEST(EmbeddedResultSet, GetIntWithNoScan) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
-  EXPECT_EQ(rs->get_int("id"), 0);
+  EXPECT_THROW(rs->get_int("id"), std::runtime_error);
 }
 
 TEST(EmbeddedResultSet, GetStringWithNoScan) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
-  EXPECT_EQ(rs->get_string("name"), "");
+  EXPECT_THROW(rs->get_string("name"), std::runtime_error);
 }
 
 TEST(EmbeddedResultSet, GetMetaData) {
@@ -56,17 +56,13 @@ TEST(EmbeddedResultSet, Close) {
 // Test field name case conversion
 // ============================================================================
 
-TEST(EmbeddedResultSet, FieldNameLowercase) {
+TEST(EmbeddedResultSet, FieldNameLowercaseThrowsWithNoScan) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
 
-  EXPECT_NO_THROW(rs->get_int("ID"));
-  EXPECT_NO_THROW(rs->get_int("Id"));
-  EXPECT_NO_THROW(rs->get_int("id"));
-
-  EXPECT_NO_THROW(rs->get_string("NAME"));
-  EXPECT_NO_THROW(rs->get_string("Name"));
-  EXPECT_NO_THROW(rs->get_string("name"));
+  // With no scan, get_int/get_string now throw instead of returning defaults
+  EXPECT_THROW(rs->get_int("ID"), std::runtime_error);
+  EXPECT_THROW(rs->get_string("NAME"), std::runtime_error);
 }
 
 // ============================================================================
@@ -78,8 +74,9 @@ TEST(EmbeddedResultSet, FullLifecycle) {
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
 
   EXPECT_FALSE(rs->next());
-  EXPECT_EQ(rs->get_int("id"), 0);
-  EXPECT_EQ(rs->get_string("name"), "");
+  // get_int/get_string now throw with no scan
+  EXPECT_THROW(rs->get_int("id"), std::runtime_error);
+  EXPECT_THROW(rs->get_string("name"), std::runtime_error);
 
   auto metadata = rs->get_meta_data();
   EXPECT_NE(metadata, nullptr);
@@ -144,14 +141,14 @@ TEST(NetworkResultSet, Close) {
 // Test error handling with exceptions
 // ============================================================================
 
-TEST(EmbeddedResultSet, HandlesExceptionsGracefully) {
+TEST(EmbeddedResultSet, ThrowsOnErrorInsteadOfSwallowing) {
   auto conn = std::make_shared<EmbeddedConnection>(nullptr);
   auto rs = std::make_unique<EmbeddedResultSet>(nullptr, conn);
 
-  EXPECT_NO_THROW({
-    rs->next();
-    rs->get_int("field");
-    rs->get_string("field");
-    rs->close();
-  });
+  // next() returns false with no scan (not an error)
+  EXPECT_NO_THROW(rs->next());
+  // get_int/get_string throw with no scan (was silently returning defaults before)
+  EXPECT_THROW(rs->get_int("field"), std::runtime_error);
+  EXPECT_THROW(rs->get_string("field"), std::runtime_error);
+  EXPECT_NO_THROW(rs->close());
 }

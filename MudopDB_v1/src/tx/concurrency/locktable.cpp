@@ -19,6 +19,19 @@ void LockTable::s_lock(const file::BlockId& blk) {
     locks_[blk] = val + 1;
 }
 
+void LockTable::x_lock(const file::BlockId& blk) {
+    auto timestamp = std::chrono::steady_clock::now();
+    // Wait until no other locks exist (val must be 1, our own S lock)
+    while (get_lock_val(blk) > 1 && !waiting_too_long(timestamp)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(max_time_));
+    }
+    if (get_lock_val(blk) > 1) {
+        throw buffer::BufferAbortException();
+    }
+    // Set exclusive lock (negative value)
+    locks_[blk] = -1;
+}
+
 void LockTable::unlock(const file::BlockId& blk) {
     int32_t val = get_lock_val(blk);
     if (val > 1) {

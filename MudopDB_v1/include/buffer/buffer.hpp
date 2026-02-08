@@ -33,6 +33,8 @@ namespace buffer {
  * is required if used in multi-threaded context.
  */
 class Buffer {
+    friend class BufferMgr;
+
 public:
     /**
      * Creates a new buffer.
@@ -81,38 +83,10 @@ public:
      */
     std::optional<size_t> modifying_tx() const;
 
-    /**
-     * Assigns this buffer to a block.
-     * Flushes the previous block if dirty, then reads the new block.
-     * Resets pins to 0.
-     *
-     * NOTE: Package-private - should only be called by BufferMgr
-     *
-     * @param blk the block to assign
-     */
+    // Internal: only BufferMgr should call these in production code
     void assign_to_block(const file::BlockId& blk);
-
-    /**
-     * Flushes the buffer to disk if it has been modified.
-     * Follows WAL: flushes log first if lsn is set.
-     * Resets txnum to nullopt after flushing.
-     *
-     * NOTE: Package-private - should only be called by BufferMgr
-     */
     void flush();
-
-    /**
-     * Increments the pin count.
-     *
-     * NOTE: Package-private - should only be called by BufferMgr
-     */
     void pin();
-
-    /**
-     * Decrements the pin count.
-     *
-     * NOTE: Package-private - should only be called by BufferMgr
-     */
     void unpin();
 
 private:

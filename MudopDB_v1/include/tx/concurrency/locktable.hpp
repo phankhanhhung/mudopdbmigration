@@ -20,6 +20,7 @@ public:
     LockTable();
 
     void s_lock(const file::BlockId& blk);
+    void x_lock(const file::BlockId& blk);
     void unlock(const file::BlockId& blk);
 
 private:

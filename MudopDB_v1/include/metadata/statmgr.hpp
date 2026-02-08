@@ -5,6 +5,7 @@
 #include "metadata/statinfo.hpp"
 #include "record/layout.hpp"
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 #include <string>
 
@@ -38,6 +39,7 @@ private:
     std::shared_ptr<TableMgr> tbl_mgr_;
     std::unordered_map<std::string, StatInfo> tablestats_;
     size_t numcalls_;
+    mutable std::mutex mutex_;  // Protects tablestats_ and numcalls_
 };
 
 } // namespace metadata

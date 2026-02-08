@@ -10,6 +10,8 @@
 #include <optional>
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <stdexcept>
 
 namespace buffer {
@@ -41,8 +43,8 @@ public:
  *
  * Corresponds to BufferMgr in Rust (NMDB2/src/buffer/buffermgr.rs)
  *
- * Thread Safety: This class is NOT thread-safe. External synchronization
- * is required if used in multi-threaded context.
+ * Thread Safety: This class is thread-safe. All public methods
+ * are protected by an internal mutex with condition variable for waiting.
  */
 class BufferMgr {
 public:
@@ -156,6 +158,8 @@ private:
     std::vector<Buffer> bufferpool_;
     size_t num_available_;
     uint64_t max_time_;
+    mutable std::mutex mutex_;
+    std::condition_variable cv_;
 };
 
 } // namespace buffer

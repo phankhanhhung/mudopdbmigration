@@ -93,6 +93,11 @@ private:
      * Updates the cached file size.
      */
     void update_file_size(const std::string& filename);
+
+    /**
+     * Internal length() without locking (caller must hold mutex_).
+     */
+    size_t length_impl(const std::string& filename);
 };
 
 } // namespace file

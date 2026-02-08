@@ -13,6 +13,7 @@ StatMgr::StatMgr(std::shared_ptr<TableMgr> tbl_mgr,
 StatInfo StatMgr::get_stat_info(const std::string& tblname,
                                  const record::Layout& layout,
                                  std::shared_ptr<tx::Transaction> tx) {
+    std::lock_guard<std::mutex> lock(mutex_);
     numcalls_++;
     if (numcalls_ > 100) {
         refresh_statistics(tx);

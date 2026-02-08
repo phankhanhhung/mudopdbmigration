@@ -17,8 +17,9 @@ static std::mutex& get_lock_table_mutex() {
 ConcurrencyMgr::ConcurrencyMgr() {}
 
 void ConcurrencyMgr::s_lock(const file::BlockId& blk) {
+    // Check and acquire atomically under the same lock to prevent TOCTOU race
+    std::lock_guard<std::mutex> lock(get_lock_table_mutex());
     if (locks_.find(blk) == locks_.end()) {
-        std::lock_guard<std::mutex> lock(get_lock_table_mutex());
         get_lock_table().s_lock(blk);
         locks_[blk] = "S";
     }
@@ -26,7 +27,11 @@ void ConcurrencyMgr::s_lock(const file::BlockId& blk) {
 
 void ConcurrencyMgr::x_lock(const file::BlockId& blk) {
     if (!has_x_lock(blk)) {
+        // First acquire S lock if we don't have any lock
         s_lock(blk);
+        // Then upgrade to X lock on the global table
+        std::lock_guard<std::mutex> lock(get_lock_table_mutex());
+        get_lock_table().x_lock(blk);
         locks_[blk] = "X";
     }
 }

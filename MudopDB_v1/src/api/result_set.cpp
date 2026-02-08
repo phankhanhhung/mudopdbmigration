@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cctype>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 static std::string to_lowercase(const std::string& str) {
@@ -33,9 +34,9 @@ bool EmbeddedResultSet::next() {
     if (s_) {
         try {
             return s_->next();
-        } catch (...) {
+        } catch (const std::exception& e) {
             if (conn_) conn_->rollback();
-            return false;
+            throw std::runtime_error(std::string("ResultSet::next: ") + e.what());
         }
     }
     return false;
@@ -46,12 +47,12 @@ int32_t EmbeddedResultSet::get_int(const std::string& fldname) {
     if (s_) {
         try {
             return s_->get_int(fld);
-        } catch (...) {
+        } catch (const std::exception& e) {
             if (conn_) conn_->rollback();
-            return 0;
+            throw std::runtime_error(std::string("ResultSet::get_int: ") + e.what());
         }
     }
-    return 0;
+    throw std::runtime_error("ResultSet::get_int: no scan");
 }
 
 std::string EmbeddedResultSet::get_string(const std::string& fldname) {
@@ -59,12 +60,12 @@ std::string EmbeddedResultSet::get_string(const std::string& fldname) {
     if (s_) {
         try {
             return s_->get_string(fld);
-        } catch (...) {
+        } catch (const std::exception& e) {
             if (conn_) conn_->rollback();
-            return "";
+            throw std::runtime_error(std::string("ResultSet::get_string: ") + e.what());
         }
     }
-    return "";
+    throw std::runtime_error("ResultSet::get_string: no scan");
 }
 
 std::unique_ptr<Metadata> EmbeddedResultSet::get_meta_data() const {

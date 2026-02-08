@@ -37,6 +37,8 @@ LogMgr::LogMgr(std::shared_ptr<file::FileMgr> fm, const std::string& logfile)
 }
 
 size_t LogMgr::append(const std::vector<uint8_t>& logrec) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     // Get current boundary (first free position in page)
     int32_t boundary = logpage_.get_int(0);
 
@@ -68,6 +70,8 @@ size_t LogMgr::append(const std::vector<uint8_t>& logrec) {
 }
 
 void LogMgr::flush(size_t lsn) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     // Only flush if the requested LSN hasn't been saved yet
     if (lsn >= last_saved_lsn_) {
         flush_impl();
@@ -75,6 +79,8 @@ void LogMgr::flush(size_t lsn) {
 }
 
 std::unique_ptr<LogIterator> LogMgr::iterator() {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     // Flush to ensure all records are on disk
     flush_impl();
     // Create iterator starting at current block
